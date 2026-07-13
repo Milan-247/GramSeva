@@ -929,7 +929,7 @@ Phone: ${service.phoneNumber}`;
       {
     /* App frame */
   }
-      <div className="directory-frame relative w-full max-w-none lg:max-w-[1180px] 2xl:max-w-[1080px] h-dvh min-h-[620px] sm:h-[calc(100vh-48px)] sm:min-h-[720px] sm:rounded-[36px] sm:border sm:border-stone-300/80 sm:shadow-xl flex flex-col overflow-hidden transition-all animate-soft-rise">
+      <div className="directory-frame relative w-full max-w-none lg:max-w-[1180px] 2xl:max-w-[1080px] h-[calc(100vh-40px)] min-h-[calc(100vh-40px)] sm:h-[calc(100vh-48px)] sm:min-h-[calc(100vh-48px)] sm:rounded-[36px] sm:border sm:border-stone-300/80 sm:shadow-xl flex flex-col overflow-hidden transition-all animate-soft-rise">
         
         {
     /* Dynamic Mobile Banner Header block */
@@ -1071,8 +1071,8 @@ Phone: ${service.phoneNumber}`;
               {
     /* Dynamic scrollable directory area */
   }
-              <div className="service-observatory flex-1 overflow-y-auto px-4 sm:px-5 lg:px-8 pt-3 sm:pt-5 pb-24 scrollbar-none space-y-3 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-5 lg:space-y-0 lg:items-start">
-                <div className="service-feed-heading flex justify-between items-center text-xs font-black tracking-wider text-zinc-500 uppercase px-1 mb-1 lg:col-span-2 xl:col-span-3">
+              <div className="service-observatory flex-1 h-[68vh] lg:h-[72vh] xl:h-[75vh] min-h-[52rem] overflow-y-auto px-4 sm:px-5 lg:px-8 pt-3 sm:pt-5 pb-24 scrollbar-none space-y-3 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-5 lg:space-y-0 lg:items-start">
+                <div className="service-feed-heading sticky top-0 z-20 flex justify-between items-center text-xs font-black tracking-wider text-zinc-500 uppercase bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3 mb-1 lg:col-span-2 xl:col-span-3">
                   <span>Nearby Services</span>
                   <span>{filteredServices.length} listed</span>
                 </div>

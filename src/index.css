@@ -90,12 +90,12 @@ textarea {
 .brand-glyph {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border: 1px solid rgba(216, 234, 255, 0.58);
   color: #1f58f2;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0;
 }
 
@@ -108,6 +108,11 @@ textarea {
 .follow-link {
   color: #d8eaff;
   transition: color 160ms ease, border-color 160ms ease;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.65rem 0.85rem;
 }
 
 .nav-links button.active,
