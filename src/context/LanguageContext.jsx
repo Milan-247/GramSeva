@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { SUPPORTED_LANGUAGES, UI_TRANSLATIONS } from "../data/services";
 const LanguageContext = createContext(void 0);
 function LanguageProvider({ children }) {
@@ -15,6 +15,9 @@ function LanguageProvider({ children }) {
     setLanguageState(lang);
     localStorage.setItem("village_directory_lang", lang);
   };
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
   const t = UI_TRANSLATIONS[language] || UI_TRANSLATIONS["en"];
   return <LanguageContext.Provider value={{ language, setLanguage, t, supportedLanguages: SUPPORTED_LANGUAGES }}>
       {children}

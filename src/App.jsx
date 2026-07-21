@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { lazy, Suspense, useState, useEffect, useRef, useMemo, useTransition } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import {
   Phone,
   MapPin,
@@ -51,7 +51,11 @@ import {
   Eye,
   Type,
   Siren,
-  Filter
+  Filter,
+  ChevronRight,
+  CheckCircle2,
+  Keyboard,
+  Sparkles
 } from "lucide-react";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext";
 import uiBackdrop from "./assets/gramseva-bg.svg";
@@ -60,8 +64,54 @@ import {
   KERALA_DISTRICTS,
   LOCALITIES_EN
 } from "./data/services";
+
+const ServiceMap = lazy(() => import("./components/ServiceMap.jsx"));
+
+const CATEGORY_ALIASES = {
+  health: ["hospital", "clinic", "doctor", "medical", "ambulance", "phc", "fhc", "health centre", "arogya", "ആരോഗ്യം", "ആശുപത്രി", "ಆರೋಗ್ಯ", "ಆಸ್ಪತ್ರೆ", "स्वास्थ्य", "अस्पताल", "వైద్యం", "ఆసుపత్రి"],
+  water: ["water", "kwa", "jal", "pipe", "connection", "drinking water", "tank", "borewell", "vellam", "വെള്ളം", "ജലം", "ನೀರು", "ಜಲ", "पानी", "जल", "నీరు", "జలం"],
+  agriculture: ["krishi", "farm", "farmer", "seed", "soil", "fertilizer", "agriculture", "kisan", "കൃഷി", "കർഷകൻ", "ಕೃಷಿ", "ರೈತ", "कृषि", "किसान", "వ్యవసాయం", "రైతు"],
+  education: ["school", "college", "teacher", "education", "class", "student", "library", "വിദ്യാഭ്യാസം", "സ്കൂൾ", "ಶಾಲೆ", "ಶಿಕ್ಷಣ", "स्कूल", "शिक्षा", "పాఠశాల", "విద్య"],
+  government: ["panchayat", "village", "revenue", "registry", "akshaya", "certificate", "office", "ration", "tax", "പഞ്ചായത്ത്", "വില്ലേജ്", "കച്ചേരി", "ಪಂಚಾಯತ್", "ಕಚೇರಿ", "सरकार", "पंचायत", "प्रमाणपत्र", "ప్రభుత్వం", "పంచాయతీ"]
+};
+
+function normalizeSearchText(value = "") {
+  return String(value)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function levenshteinDistance(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  const current = Array.from({ length: b.length + 1 }, () => 0);
+
+  for (let i = 1; i <= a.length; i += 1) {
+    current[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      current[j] = Math.min(current[j - 1] + 1, previous[j] + 1, previous[j - 1] + cost);
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+
+  return previous[b.length];
+}
+
+function getDuplicateKey(service) {
+  const data = service.translations?.en || Object.values(service.translations || {})[0] || {};
+  return normalizeSearchText(`${data.title || ""} ${service.localityName || ""} ${service.districtName || ""}`);
+}
 function DirectoryApp() {
   const { language, setLanguage, t, supportedLanguages } = useLanguage();
+  const shouldReduceMotion = useReducedMotion();
   const locStrings = {
     en: {
       locationHubTitle: "Location Filter Hub",
@@ -271,14 +321,28 @@ function DirectoryApp() {
   const [isNearMeActive, setIsNearMeActive] = useState(false);
   const [nearMeDistance, setNearMeDistance] = useState(30);
   const [sortByProximity, setSortByProximity] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(50);
+  const [visibleCount, setVisibleCount] = useState(12);
   const [reportService, setReportService] = useState(null);
   const [reportText, setReportText] = useState("");
   const [isLargeText, setIsLargeText] = useState(false);
   const [isHighContrast, setIsHighContrast] = useState(false);
+  const [isUiPending, startUiTransition] = useTransition();
+  const [settledSearchQuery, setSettledSearchQuery] = useState("");
+  const searchInputRef = useRef(null);
+  const navigateToTab = (tabId) => {
+    if (tabId === currentTab) return;
+    startUiTransition(() => setCurrentTab(tabId));
+  };
+  const chooseCategory = (categoryKey) => {
+    startUiTransition(() => setSelectedCategory(categoryKey));
+  };
   useEffect(() => {
-    setVisibleCount(50);
+    setVisibleCount(12);
   }, [searchQuery, selectedCategory, selectedDistrict, selectedLocality, isNearMeActive, sortByProximity]);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setSettledSearchQuery(searchQuery), 140);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
   const getSimulatedDistance = (service) => {
     if (service.id === "serv-m1") return 1.2;
     if (service.id === "serv-m2") return 0.4;
@@ -319,6 +383,99 @@ function DirectoryApp() {
       return Math.round((baseDist + noise * 12) * 10) / 10;
     }
   };
+  const getServiceSearchText = (service) => {
+    const translationText = Object.values(service.translations || {})
+      .flatMap((entry) => [
+        entry.title,
+        entry.description,
+        entry.category,
+        entry.location,
+        entry.hours,
+        entry.contactName,
+        ...(entry.history || []),
+        ...(entry.extraNotes || [])
+      ])
+      .filter(Boolean);
+
+    return normalizeSearchText([
+      ...translationText,
+      service.categoryKey,
+      service.districtName,
+      service.localityName,
+      service.phoneNumber,
+      ...(CATEGORY_ALIASES[service.categoryKey] || [])
+    ].join(" "));
+  };
+  const getSearchScore = (haystack, haystackTokens, normalizedQuery) => {
+    if (!normalizedQuery) return 0;
+    if (haystack.includes(normalizedQuery)) return 120 + normalizedQuery.length;
+
+    const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+    let score = 0;
+
+    queryTokens.forEach((queryToken) => {
+      let bestTokenScore = 0;
+      const maxDistance = queryToken.length > 7 ? 2 : 1;
+
+      for (const token of haystackTokens) {
+        if (token === queryToken) {
+          bestTokenScore = 32;
+          break;
+        }
+        if (bestTokenScore < 20 && (token.startsWith(queryToken) || token.includes(queryToken))) {
+          bestTokenScore = 20;
+          continue;
+        }
+        if (
+          bestTokenScore < 14
+          && queryToken.length >= 4
+          && token.length >= 4
+          && Math.abs(token.length - queryToken.length) <= maxDistance
+          && levenshteinDistance(queryToken, token) <= maxDistance
+        ) {
+          bestTokenScore = 14;
+        }
+      }
+
+      score += bestTokenScore;
+    });
+
+    return score;
+  };
+  const getVerificationAgeDays = (service) => {
+    if (!service.lastVerified) return 999;
+    const verifiedDate = new Date(service.lastVerified);
+    if (Number.isNaN(verifiedDate.getTime())) return 999;
+    return Math.max(0, Math.floor((Date.now() - verifiedDate.getTime()) / 86400000));
+  };
+  const getDuplicateCount = (service, counts) => counts[getDuplicateKey(service)] || 0;
+  const getVerificationScore = (service, counts) => {
+    const data = service.translations.en || Object.values(service.translations || {})[0] || {};
+    let score = 40;
+    if (service.phoneNumber) score += 12;
+    if (data.location) score += 10;
+    if (data.hours) score += 10;
+    if (data.contactName) score += 8;
+    if (Object.keys(service.translations || {}).length >= 4) score += 8;
+    if (getVerificationAgeDays(service) <= 30) score += 12;
+    if (getDuplicateCount(service, counts) > 1) score -= 15;
+    return Math.max(35, Math.min(100, score));
+  };
+  const getConfidenceLevel = (score) => {
+    if (score >= 86) return "High confidence";
+    if (score >= 68) return "Needs routine check";
+    return "Verify before visiting";
+  };
+  const getLastCheckedBy = (service) => {
+    const checkerByCategory = {
+      health: "Health volunteer desk",
+      water: "Ward water committee",
+      agriculture: "Krishi help desk",
+      education: "School liaison desk",
+      government: "Panchayat registry desk"
+    };
+    return checkerByCategory[service.categoryKey] || "Local volunteer desk";
+  };
   const [services, setServices] = useState([]);
   const [selectedDetailService, setSelectedDetailService] = useState(null);
   const [detailPreviewLang, setDetailPreviewLang] = useState(null);
@@ -326,6 +483,29 @@ function DirectoryApp() {
   const [mapPan, setMapPan] = useState({ x: 0, y: 0 });
   const [isMapDragging, setIsMapDragging] = useState(false);
   const [mapDragStart, setMapDragStart] = useState({ x: 0, y: 0 });
+  useEffect(() => {
+    const handleKeyboardShortcuts = (event) => {
+      const target = event.target;
+      const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
+      if (event.key === "/" && !isTyping) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (event.key === "Escape") {
+        if (reportService) {
+          setReportService(null);
+        } else if (selectedDetailService) {
+          setSelectedDetailService(null);
+          setDetailPreviewLang(null);
+        } else if (searchQuery) {
+          setSearchQuery("");
+          searchInputRef.current?.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyboardShortcuts);
+    return () => window.removeEventListener("keydown", handleKeyboardShortcuts);
+  }, [reportService, searchQuery, selectedDetailService]);
   useEffect(() => {
     if (selectedDetailService) {
       setMapZoom(1);
@@ -612,7 +792,7 @@ function DirectoryApp() {
     setIsEmergencyCheck(false);
     setSuccessToast("Service suggested successfully!");
     setTimeout(() => setSuccessToast(null), 3e3);
-    setCurrentTab("services");
+    navigateToTab("services");
   };
   const getCategoryIcon = (categoryKey) => {
     switch (categoryKey) {
@@ -795,45 +975,46 @@ Phone: ${service.phoneNumber}`;
     }
     return ["Aadhaar card", "Address proof", "Phone number", "Relevant application or receipt"];
   };
-  const baseFilteredServices = services.filter((service) => {
-    if (selectedCategory !== "all" && service.categoryKey !== selectedCategory) {
-      if (selectedCategory === "agriculture" && service.translations.en.category.toLowerCase() === "ration") {
-      } else {
-        return false;
+  const duplicateCounts = useMemo(() => services.reduce((acc, service) => {
+    const key = getDuplicateKey(service);
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {}), [services]);
+  const searchableServices = useMemo(() => services.map((service) => {
+    const searchText = getServiceSearchText(service);
+    return {
+      service,
+      searchText,
+      searchTokens: [...new Set(searchText.split(" ").filter(Boolean))]
+    };
+  }), [services]);
+  const normalizedSearchQuery = normalizeSearchText(settledSearchQuery);
+  const filteredServices = useMemo(() => searchableServices
+    .map(({ service, searchText, searchTokens }) => ({
+      service,
+      searchScore: getSearchScore(searchText, searchTokens, normalizedSearchQuery)
+    }))
+    .filter(({ service, searchScore }) => {
+      if (selectedCategory !== "all" && service.categoryKey !== selectedCategory) {
+        if (selectedCategory === "agriculture" && service.translations.en.category.toLowerCase() === "ration") {
+        } else {
+          return false;
+        }
       }
-    }
-    if (selectedDistrict !== "all" && service.districtName !== selectedDistrict) {
-      return false;
-    }
-    if (selectedLocality !== "all" && service.localityName !== selectedLocality) {
-      return false;
-    }
-    if (isNearMeActive) {
-      const dist = getSimulatedDistance(service);
-      if (dist > nearMeDistance) {
-        return false;
-      }
-    }
-    if (!searchQuery.trim()) return true;
-    const normQuery = searchQuery.toLowerCase();
-    const trans = service.translations[language] || service.translations["en"];
-    const titleMatch = trans.title.toLowerCase().includes(normQuery);
-    const descMatch = trans.description.toLowerCase().includes(normQuery);
-    const locMatch = trans.location.toLowerCase().includes(normQuery);
-    const contactMatch = trans.contactName.toLowerCase().includes(normQuery);
-    const categoryMatch = trans.category.toLowerCase().includes(normQuery);
-    const phoneMatch = service.phoneNumber.includes(normQuery);
-    const transEn = service.translations["en"];
-    const titleEnMatch = transEn.title.toLowerCase().includes(normQuery);
-    const descEnMatch = transEn.description.toLowerCase().includes(normQuery);
-    return titleMatch || descMatch || locMatch || contactMatch || categoryMatch || phoneMatch || titleEnMatch || descEnMatch;
-  });
-  const filteredServices = [...baseFilteredServices];
-  if (isNearMeActive || sortByProximity) {
-    filteredServices.sort((a, b) => getSimulatedDistance(a) - getSimulatedDistance(b));
-  }
-  const emergencyServices = filteredServices.filter((service) => service.isEmergency || service.categoryKey === "health" || /police|ambulance|hospital|fire|emergency|helpline/i.test(service.translations.en.title)).slice(0, 24);
-  const mapServices = filteredServices.filter((service) => mapCategoryFilter === "all" || service.categoryKey === mapCategoryFilter);
+      if (selectedDistrict !== "all" && service.districtName !== selectedDistrict) return false;
+      if (selectedLocality !== "all" && service.localityName !== selectedLocality) return false;
+      if (isNearMeActive && getSimulatedDistance(service) > nearMeDistance) return false;
+      return !normalizedSearchQuery || searchScore > 0;
+    })
+    .sort((a, b) => {
+      if (normalizedSearchQuery && b.searchScore !== a.searchScore) return b.searchScore - a.searchScore;
+      if (isNearMeActive || sortByProximity) return getSimulatedDistance(a.service) - getSimulatedDistance(b.service);
+      return 0;
+    })
+    .map(({ service }) => service), [searchableServices, normalizedSearchQuery, selectedCategory, selectedDistrict, selectedLocality, isNearMeActive, nearMeDistance, sortByProximity]);
+  const emergencyServices = useMemo(() => filteredServices
+    .filter((service) => service.isEmergency || service.categoryKey === "health" || /police|ambulance|hospital|fire|emergency|helpline/i.test(service.translations.en.title))
+    .slice(0, 24), [filteredServices]);
   const searchSuggestions = searchQuery.trim().length > 0 ? filteredServices.slice(0, 5).map((service) => {
     const data = service.translations[language] || service.translations.en;
     return { id: service.id, label: data.title, helper: data.category };
@@ -843,19 +1024,20 @@ Phone: ${service.phoneNumber}`;
     { id: "water connection", label: "Water connection", helper: t.water || "Water" },
     { id: "family health centre", label: "Family Health Centre", helper: t.health || "Health" }
   ];
-  return <div id="dir-app-root" style={{ "--gram-bg": `url(${uiBackdrop})` }} className={`gram-root observatory-shell min-h-screen ${isHighContrast ? "bg-black" : ""} text-slate-900 font-sans antialiased flex flex-col 2xl:flex-row items-stretch 2xl:items-center justify-center p-0 sm:p-6 transition-all duration-300 ${isLargeText ? "text-[110%]" : ""}`}>
-      <nav className="observatory-nav">
+  return <div id="dir-app-root" style={{ "--gram-bg": `url(${uiBackdrop})` }} className={`gram-root min-h-screen ${isHighContrast ? "bg-black high-contrast" : ""} text-slate-900 font-sans antialiased flex items-stretch justify-center transition-all duration-300 ${isLargeText ? "text-[110%]" : ""}`}>
+      <a href="#service-results" className="skip-link">Skip to service results</a>
+      <nav className="observatory-nav" aria-label="Primary navigation">
         <div className="brand-mark">
           <span className="brand-glyph">GS</span>
           <span>GramSeva</span>
         </div>
-        <div className="nav-links">
-          <button onClick={() => setCurrentTab("services")} className={currentTab === "services" ? "active" : ""}>Directory</button>
-          <button onClick={() => setCurrentTab("emergency")} className={currentTab === "emergency" ? "active" : ""}>Emergency</button>
-          <button onClick={() => setCurrentTab("map")} className={currentTab === "map" ? "active" : ""}>Map Grid</button>
-          <button onClick={() => setCurrentTab("suggest")} className={currentTab === "suggest" ? "active" : ""}>Contribute</button>
+        <div className="nav-links" role="tablist" aria-label="Directory sections">
+          <button onClick={() => navigateToTab("services")} className={currentTab === "services" ? "active" : ""} role="tab" aria-selected={currentTab === "services"}>Directory</button>
+          <button onClick={() => navigateToTab("emergency")} className={currentTab === "emergency" ? "active" : ""} role="tab" aria-selected={currentTab === "emergency"}>Emergency</button>
+          <button onClick={() => navigateToTab("map")} className={currentTab === "map" ? "active" : ""} role="tab" aria-selected={currentTab === "map"}>Map Grid</button>
+          <button onClick={() => navigateToTab("suggest")} className={currentTab === "suggest" ? "active" : ""} role="tab" aria-selected={currentTab === "suggest"}>Contribute</button>
         </div>
-        <button onClick={() => setCurrentTab("profile")} className="follow-link">Open Controls</button>
+        <button onClick={() => navigateToTab("profile")} className="follow-link">Open Controls</button>
       </nav>
       
       {
@@ -929,12 +1111,12 @@ Phone: ${service.phoneNumber}`;
       {
     /* App frame */
   }
-      <div className="directory-frame relative w-full max-w-none lg:max-w-[1180px] 2xl:max-w-[1080px] h-dvh min-h-[620px] sm:h-[calc(100vh-48px)] sm:min-h-[720px] sm:rounded-[36px] sm:border sm:border-stone-300/80 sm:shadow-xl flex flex-col overflow-hidden transition-all animate-soft-rise">
+      <div className="directory-frame relative w-full max-w-[1600px] h-dvh min-h-[620px] bg-[#101214] lg:h-[calc(100vh-32px)] lg:my-4 lg:rounded-2xl lg:border lg:border-slate-300/70 lg:shadow-2xl flex flex-col overflow-hidden transition-all">
         
         {
     /* Dynamic Mobile Banner Header block */
   }
-        <div className="gram-header text-white p-4 sm:p-5 lg:p-6 pt-8 sm:pt-6 pb-5 shrink-0 flex flex-col gap-2 relative shadow-lg animate-sheen">
+        <header className="gram-header app-header text-white p-4 sm:p-5 lg:p-6 pt-6 pb-5 shrink-0 flex flex-col gap-2 relative">
           
           {
     /* Virtual OS Status Bar */
@@ -942,7 +1124,7 @@ Phone: ${service.phoneNumber}`;
           <div className="h-6 flex justify-between items-center text-[12px] text-white/95 font-semibold px-1 mb-1">
             <span>9:41</span>
             <span className="font-label text-[10px] font-extrabold tracking-widest text-emerald-100 uppercase">GramSeva</span>
-            <div className={`flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold border backdrop-blur-sm transition-colors ${isOfflineMode ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-emerald-500/20 text-emerald-200 border-emerald-300/30"}`}>
+            <div className={`network-status flex items-center space-x-1 px-2.5 py-0.5 text-[9px] font-bold border transition-colors ${isOfflineMode ? "is-offline bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-emerald-500/20 text-emerald-200 border-emerald-300/30"}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${isOfflineMode ? "bg-amber-400" : "bg-emerald-400 animate-pulse"}`} />
               <span className="font-label">Offline Ready</span>
             </div>
@@ -955,29 +1137,35 @@ Phone: ${service.phoneNumber}`;
             <div className="flex-1 min-w-0">
               <p className="font-label text-[9px] uppercase tracking-[0.32em] text-signal-orange mb-1">GramSeva command grid</p>
               <h2 className="header-title font-classical text-3xl lg:text-5xl font-black text-white tracking-tight truncate leading-none drop-shadow-sm">
-                {selectedLocality === "all" ? "Manjeshwaram" : selectedLocality} Panchayat
+                {selectedLocality === "all"
+                  ? selectedDistrict === "all" ? "Kerala Service Directory" : `${selectedDistrict} Service Directory`
+                  : `${selectedLocality} Panchayat`}
               </h2>
               <p className="text-xs lg:text-sm text-emerald-100/95 font-semibold tracking-wide mt-1">
-                {selectedDistrict} District &middot; {filteredServices.length} services
+                {selectedDistrict === "all" ? "All Kerala districts" : `${selectedDistrict} District`} &middot; {filteredServices.length} services
               </p>
             </div>
             
             {
     /* Quick Vernacular Lang Buttons (Capsule style matching mockup) */
   }
-            <div className="flex bg-black/20 p-0.5 rounded-xl border border-white/15 shrink-0 shadow-inner backdrop-blur-sm">
+            <div className="language-switcher flex bg-black/20 p-0.5 border border-white/15 shrink-0">
               {[
-    { code: "en", label: "EN" },
-    { code: "ml", label: "\u0D2E\u0D32" },
-    { code: "hi", label: "\u0939\u093F" },
-    { code: "te", label: "\u0C24\u0C46" },
-    { code: "kn", label: "\u0C95" }
+    { code: "en", label: "EN", name: "English" },
+    { code: "ml", label: "\u0D2E\u0D32", name: "Malayalam" },
+    { code: "hi", label: "\u0939\u093F", name: "Hindi" },
+    { code: "te", label: "\u0C24\u0C46", name: "Telugu" },
+    { code: "kn", label: "\u0C95", name: "Kannada" }
   ].map((lang) => {
     const isActive = language === lang.code;
     return <button
+      type="button"
       key={lang.code}
       onClick={() => setLanguage(lang.code)}
-      className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold tracking-tight transition active:scale-95 ${isActive ? "bg-white text-emerald-900 shadow-xs" : "text-white/85 hover:bg-white/10"}`}
+      aria-pressed={isActive}
+      aria-label={`Use ${lang.name}`}
+      title={lang.name}
+      className={isActive ? "is-active" : ""}
     >
                     {lang.label}
                   </button>;
@@ -1010,10 +1198,13 @@ Phone: ${service.phoneNumber}`;
     /* Primary search input */
   }
           <div className="relative md:max-w-3xl">
-            <div className="service-search bg-white rounded-2xl p-1.5 shadow-md flex items-center mt-3 border border-slate-100">
+            <div className={`service-search bg-white flex items-center mt-3 border ${isSearchFocused ? "is-focused" : ""} ${searchQuery !== settledSearchQuery ? "is-searching" : ""}`}>
               <Search className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
               <input
+    ref={searchInputRef}
     type="text"
+    aria-busy={searchQuery !== settledSearchQuery}
+    aria-label="Search services by name, category, place, contact, or language"
     placeholder={t.searchPlaceholder || "Search services..."}
     value={searchQuery}
     onFocus={() => setIsSearchFocused(true)}
@@ -1021,13 +1212,11 @@ Phone: ${service.phoneNumber}`;
     onChange={(e) => setSearchQuery(e.target.value)}
     className="w-full text-slate-800 placeholder-slate-400 bg-transparent text-sm py-2 px-2.5 outline-none border-none leading-none font-semibold"
   />
-              {searchQuery ? <button onClick={() => setSearchQuery("")} className="p-1 text-slate-400 hover:text-slate-600 mr-2" aria-label="Clear search">
-                  <X className="w-3.5 h-3.5" />
-                </button> : <span className="w-4 h-4 rounded-full bg-slate-100 mr-3 shrink-0 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                </span>}
+              {searchQuery ? <button onClick={() => setSearchQuery("")} className="search-clear" aria-label="Clear search">
+                  <X className="w-4 h-4" />
+                </button> : <span className="search-shortcut" aria-hidden="true"><Keyboard className="w-3.5 h-3.5" /> /</span>}
             </div>
-            {isSearchFocused && searchSuggestions.length > 0 && <div className="absolute top-full mt-2 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl text-slate-900 border border-slate-200 rounded-2xl shadow-xl p-2 animate-soft-rise">
+            {isSearchFocused && searchSuggestions.length > 0 && <div className="search-suggestions absolute top-full mt-2 left-0 right-0 z-40 bg-white/95 text-slate-900 border border-slate-200 rounded-xl shadow-xl p-2">
                 <div className="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">{ui.searchSuggestions}</div>
                 {searchSuggestions.map((item) => <button
     key={item.id}
@@ -1040,12 +1229,21 @@ Phone: ${service.phoneNumber}`;
               </div>}
           </div>
 
-        </div>
+        </header>
 
         {
     /* View switcher container */
   }
-        <div className="flex-1 flex flex-col min-h-0 bg-[#121214]">
+        <div className={`app-content-shell flex-1 flex flex-col min-h-0 bg-[#101214] ${isUiPending ? "is-pending" : ""}`} aria-busy={isUiPending}>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={currentTab}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.14, ease: [0.2, 0.8, 0.2, 1] }}
+              className="tab-surface flex-1 flex flex-col min-h-0"
+            >
           
           {
     /* Tab Content 1: Services Directory List */
@@ -1054,12 +1252,14 @@ Phone: ${service.phoneNumber}`;
               {
     /* Category Horizontal Filter Row */
   }
-              <div className="category-strip flex overflow-x-auto gap-2 px-4 sm:px-5 lg:px-6 py-3 border-b border-zinc-800/80 scrollbar-none shrink-0 select-none">
+              <div className="category-strip flex overflow-x-auto gap-2 px-4 sm:px-5 lg:px-6 py-3 border-b border-zinc-800/80 scrollbar-none shrink-0 select-none" role="toolbar" aria-label="Filter services by category">
                 {categoryOptions.map((cat) => {
     const isActive = selectedCategory === cat.key;
     return <button
       key={cat.key}
-      onClick={() => setSelectedCategory(cat.key)}
+      onClick={() => chooseCategory(cat.key)}
+      aria-pressed={isActive}
+      aria-label={`Show ${cat.label} services`}
       className={`category-pill ${isActive ? "is-active" : ""} flex items-center space-x-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition whitespace-nowrap border shrink-0 active:scale-95 ${isActive ? "bg-zinc-800 text-white border-emerald-500/30 shadow-sm" : "bg-transparent text-zinc-400 border-zinc-800/60 hover:text-white hover:border-zinc-700"}`}
     >
                       {cat.icon}
@@ -1068,16 +1268,46 @@ Phone: ${service.phoneNumber}`;
   })}
               </div>
 
+              <div className="interaction-rail px-4 sm:px-5 lg:px-6 py-3 border-b border-zinc-800/70">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold">
+                    <span className="rail-chip rail-result-count"><Sparkles className="w-3.5 h-3.5" /> {filteredServices.length} matches</span>
+                    <span className="rail-chip">{selectedCategory === "all" ? "All services" : getCategoryName(selectedCategory)}</span>
+                    <span className="rail-chip">{selectedDistrict === "all" ? "All districts" : selectedDistrict}</span>
+                    <span className="rail-chip">{selectedLocality === "all" ? "All localities" : selectedLocality}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setSortByProximity((value) => !value)} className={`rail-action ${sortByProximity ? "is-active" : ""}`} aria-pressed={sortByProximity}>Nearest first</button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSelectedCategory("all");
+                        setSelectedDistrict("Kozhikode");
+                        setSelectedLocality("Mukkali");
+                        setSortByProximity(false);
+                      }}
+                      className="rail-action"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {
     /* Dynamic scrollable directory area */
   }
-              <div className="service-observatory flex-1 overflow-y-auto px-4 sm:px-5 lg:px-8 pt-3 sm:pt-5 pb-24 scrollbar-none space-y-3 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0 lg:items-start">
-                <div className="service-feed-heading flex justify-between items-center text-xs font-black tracking-wider text-zinc-500 uppercase px-1 mb-1 lg:col-span-2">
-                  <span>Nearby Services</span>
-                  <span>{filteredServices.length} listed</span>
+              <div id="service-results" className="service-observatory flex-1 overflow-y-auto px-4 sm:px-5 lg:px-6 pt-4 pb-24 scrollbar-none" tabIndex={-1}>
+                <div className="service-feed-heading flex justify-between items-end gap-4 px-1 mb-1">
+                  <div>
+                    <span className="service-feed-kicker">Directory results</span>
+                    <h3>Services near {selectedLocality === "all" ? selectedDistrict : selectedLocality}</h3>
+                  </div>
+                  <span className="service-feed-count">Showing {Math.min(visibleCount, filteredServices.length)} of {filteredServices.length}</span>
                 </div>
 
-                <AnimatePresence initial={false}>
+                <AnimatePresence initial={false} mode="popLayout">
                   {filteredServices.length > 0 ? filteredServices.slice(0, visibleCount).map((service, index) => {
     const data = service.translations[language] || service.translations["en"];
     const isVerifiedPulse = (() => {
@@ -1091,15 +1321,28 @@ Phone: ${service.phoneNumber}`;
         return false;
       }
     })();
+    const verificationScore = getVerificationScore(service, duplicateCounts);
+    const duplicateCount = getDuplicateCount(service, duplicateCounts);
     return <motion.div
       key={service.id}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, scale: 1.01 }}
-      whileTap={{ scale: 0.99 }}
-      transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
+      layout={shouldReduceMotion ? false : "position"}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 5 }}
+      animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+      whileHover={shouldReduceMotion ? undefined : { y: -2 }}
+      whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.16, delay: shouldReduceMotion ? 0 : Math.min(index * 0.012, 0.08), ease: [0.2, 0.8, 0.2, 1] }}
       onClick={() => setSelectedDetailService(service)}
-      className="service-card bg-zinc-900/95 border border-zinc-800/80 rounded-2xl p-4 sm:p-5 cursor-pointer hover:bg-zinc-800/80 hover:border-zinc-700 transition-all duration-200 flex flex-col sm:flex-row gap-3 sm:gap-4 shadow-md relative"
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          setSelectedDetailService(service);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open details for ${data.title}`}
+      className="service-card bg-zinc-900/95 border border-zinc-800/80 p-4 sm:p-5 cursor-pointer transition flex flex-row gap-3 sm:gap-4 relative"
     >
                           {
       /* Emergency Stripe */
@@ -1109,7 +1352,7 @@ Phone: ${service.phoneNumber}`;
                           {
       /* Customized icon wrapper on left */
     }
-                          <div className={`icon-tile w-12 h-12 lg:w-13 lg:h-13 rounded-2xl flex items-center justify-center shrink-0 ${getCategoryColor(service.categoryKey)}`}>
+                          <div className={`icon-tile w-12 h-12 lg:w-13 lg:h-13 flex items-center justify-center shrink-0 ${getCategoryColor(service.categoryKey)}`}>
                             {getCustomizedIcon(service)}
                           </div>
 
@@ -1118,16 +1361,16 @@ Phone: ${service.phoneNumber}`;
     }
                           <div className="flex-1 min-w-0">
                             <div className="service-card-head flex flex-col min-[520px]:flex-row min-[520px]:items-start min-[520px]:justify-between gap-2">
-                              <h3 className="service-card-title font-classical text-base font-black text-white leading-snug tracking-tight pr-1">
+                              <h3 className="service-card-title text-[15px] sm:text-base font-extrabold text-white leading-snug pr-1">
                                 {data.title}
                               </h3>
                               
                               {
       /* Status indicator capsule */
     }
-                              {isVerifiedPulse ? <span className="service-status shrink-0 text-[9px] font-black tracking-tight text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <span className="w-1 h-1 rounded-full bg-emerald-400 animate-ping" />
-                                  <span className="font-label">Verified</span>
+                              {isVerifiedPulse ? <span className="service-status shrink-0 text-[10px] font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/25 px-2 py-1 flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Verified</span>
                                 </span> : <span className="service-status shrink-0 text-[9px] font-black tracking-tight text-amber-400 bg-amber-950/40 border border-amber-500/20 px-2 py-0.5 rounded-full">
                                   May be outdated
                                 </span>}
@@ -1154,9 +1397,15 @@ Phone: ${service.phoneNumber}`;
                                 <span className="service-hours">{data.hours}</span>
                               </div>
                             </div>
+                            <div className="data-quality-row" aria-label={`Verification score ${verificationScore} percent, ${getConfidenceLevel(verificationScore)}`}>
+                              <span>{verificationScore}% verified</span>
+                              <span>{getConfidenceLevel(verificationScore)}</span>
+                              <span>{getLastCheckedBy(service)}</span>
+                              {duplicateCount > 1 && <span className="duplicate-risk">Duplicate risk</span>}
+                            </div>
                             <div className="service-card-footer mt-3">
-                              <span>Open details</span>
-                              <span aria-hidden="true">+</span>
+                              <span>View service details</span>
+                              <span aria-hidden="true"><ChevronRight className="w-3.5 h-3.5" /></span>
                             </div>
                           </div>
 
@@ -1180,10 +1429,10 @@ Phone: ${service.phoneNumber}`;
 
                 {filteredServices.length > visibleCount && <div className="pt-2 pb-4 text-center lg:col-span-2">
                     <button
-    onClick={() => setVisibleCount((p) => p + 100)}
+    onClick={() => setVisibleCount((p) => p + 12)}
     className="w-full py-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800/80 text-emerald-400 font-extrabold text-xs uppercase tracking-widest rounded-2xl transition shadow-md active:scale-98"
   >
-                      Load More (+100)
+                      Show 12 more services
                     </button>
                     <p className="text-[10px] text-zinc-500 font-semibold mt-1.5">
                       Showing {visibleCount} of {filteredServices.length} services
@@ -1240,246 +1489,17 @@ Phone: ${service.phoneNumber}`;
           {
     /* Tab Content 2: Full interactive vector map */
   }
-          {currentTab === "map" && <div className="flex-1 flex flex-col relative select-none">
-              
-              {
-    /* Floating Map HUD header */
-  }
-              <div className="absolute top-3 inset-x-3 md:inset-x-6 z-30 bg-zinc-950/90 border border-zinc-850 p-2.5 md:p-3 rounded-xl flex flex-wrap items-center justify-between text-[11px] md:text-xs text-zinc-300 font-bold gap-2 shadow-lg backdrop-blur-xs">
-                <div className="font-label flex items-center gap-1.5 text-white min-w-0">
-                  <Compass className="w-3.5 h-3.5 text-emerald-400 animate-spin" style={{ animationDuration: "24s" }} />
-                  <span className="truncate">{selectedDistrict.toUpperCase()} LOCATION HUB</span>
-                </div>
-                <span className="text-[9px] text-zinc-500 font-label">Zoom: {Math.round(mapZoom * 100)}%</span>
-              </div>
-
-              {
-    /* Vector Map Container */
-  }
-              <div className="flex-1 bg-[#ecf9ff] relative overflow-hidden select-none">
-                <div className="absolute top-18 md:top-20 left-3 md:left-6 right-3 md:right-auto md:max-w-xl z-30 flex gap-2 overflow-x-auto scrollbar-none">
-                  {categoryOptions.map((cat) => {
-    const isActive = mapCategoryFilter === cat.key;
-    return <button
-      key={cat.key}
-      onClick={() => setMapCategoryFilter(cat.key)}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-bold whitespace-nowrap ${isActive ? "bg-zinc-950 text-white border-zinc-800" : "bg-white/90 text-slate-700 border-slate-200 hover:bg-white"}`}
-    >
-                        <Filter className="w-3 h-3" />
-                        {cat.label}
-                      </button>;
-  })}
-                </div>
-                
-                {
-    /* Floating Map Zoom/Reset Controllers */
-  }
-                <div className="absolute right-3 md:right-6 bottom-20 md:bottom-24 z-30 flex flex-col gap-1.5 select-none">
-                  <button
-    onClick={() => setMapZoom((p) => Math.min(4, p + 0.3))}
-    className="w-8 h-8 bg-zinc-900 border border-zinc-800 text-white rounded-lg flex items-center justify-center transition active:scale-90"
-  >
-                    <ZoomIn className="w-4 h-4" />
-                  </button>
-                  <button
-    onClick={() => setMapZoom((p) => Math.max(0.8, p - 0.3))}
-    className="w-8 h-8 bg-zinc-900 border border-zinc-800 text-white rounded-lg flex items-center justify-center transition active:scale-90"
-  >
-                    <ZoomOut className="w-4 h-4" />
-                  </button>
-                  <button
-    onClick={() => {
-      setMapZoom(1);
-      setMapPan({ x: 0, y: 0 });
-    }}
-    className="w-8 h-8 bg-zinc-900 border border-zinc-800 text-white rounded-lg flex items-center justify-center transition active:scale-90"
-  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {
-    /* Simulated Grid Layer */
-  }
-                <div
-    style={{
-      transform: `translate(${mapPan.x}px, ${mapPan.y}px) scale(${mapZoom})`,
-      transformOrigin: "center center",
-      transition: isMapDragging ? "none" : "transform 0.15s cubic-bezier(0.1, 0.9, 0.2, 1)",
-      touchAction: "none"
-    }}
-    className={`absolute inset-0 w-full h-full ${isMapDragging ? "cursor-grabbing" : "cursor-grab"}`}
-    onMouseDown={(e) => {
-      setIsMapDragging(true);
-      setMapDragStart({ x: e.clientX - mapPan.x, y: e.clientY - mapPan.y });
-    }}
-    onMouseMove={(e) => {
-      if (!isMapDragging) return;
-      setMapPan({
-        x: e.clientX - mapDragStart.x,
-        y: e.clientY - mapDragStart.y
-      });
-    }}
-    onMouseUp={() => setIsMapDragging(false)}
-    onMouseLeave={() => setIsMapDragging(false)}
-    onTouchStart={(e) => {
-      if (e.touches.length === 1) {
-        setIsMapDragging(true);
-        setMapDragStart({ x: e.touches[0].clientX - mapPan.x, y: e.touches[0].clientY - mapPan.y });
-      }
-    }}
-    onTouchMove={(e) => {
-      if (e.touches.length === 1 && isMapDragging) {
-        setMapPan({
-          x: e.touches[0].clientX - mapDragStart.x,
-          y: e.touches[0].clientY - mapDragStart.y
-        });
-      }
-    }}
-    onTouchEnd={() => setIsMapDragging(false)}
-  >
-                  
-                  {
-    /* Grid Lines */
-  }
-                  <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(14,165,233,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(14,165,233,0.06)_1px,transparent_1px)] bg-[size:16px_16px] opacity-40" />
-
-                  {
-    /* Sea Labels */
-  }
-                  <div className="absolute left-6 top-36 font-black text-[9px] uppercase tracking-widest text-[#0ca5e9]/25 font-mono -rotate-90">Laccadive Sea</div>
-
-                  {
-    /* Shaded Land */
-  }
-                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <path
-    d="M 12,0 L 22,12 Q 28,22 42,26 T 34,36 T 44,46 T 62,52 T 48,62 T 48,72 T 74,74 T 58,82 T 44,86 T 66,90 T 56,94 T 72,98 L 100,100 L 100,0 Z"
-    className="fill-[#f2f8f4] stroke-emerald-600/10 stroke-1"
-  />
-                  </svg>
-
-                  {
-    /* Static nodes on map */
-  }
-                  {[
-    { name: "Kasaragod", x: 22, y: 12 },
-    { name: "Kannur", x: 28, y: 22 },
-    { name: "Wayanad", x: 42, y: 26 },
-    { name: "Kozhikode", x: 34, y: 36 },
-    { name: "Malappuram", x: 44, y: 46 },
-    { name: "Palakkad", x: 62, y: 52 },
-    { name: "Kottayam", x: 58, y: 82 }
-  ].map((node) => {
-    const isSelected = selectedDistrict === node.name;
-    return <div
-      key={node.name}
-      style={{ left: `${node.x}%`, top: `${node.y}%` }}
-      className="absolute -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center"
-    >
-                        {isSelected && <span className="absolute w-6 h-6 rounded-full bg-emerald-500/20 animate-ping" />}
-                        <button
-      onClick={() => {
-        setSelectedDistrict(node.name);
-        const locals = LOCALITIES_EN[node.name] || [];
-        setSelectedLocality(locals[0] || "all");
-      }}
-      className={`w-3.5 h-3.5 rounded-full border border-white flex items-center justify-center transition-all ${isSelected ? "bg-emerald-600 scale-125 ring-4 ring-emerald-500/30" : "bg-zinc-400 hover:bg-emerald-600"}`}
-    />
-                        <span className="text-[8px] font-black text-slate-800 bg-white/95 border border-slate-200/80 px-1 py-0.2 rounded shadow-xs mt-1 pointer-events-none whitespace-nowrap">
-                          {node.name}
-                        </span>
-                      </div>;
-  })}
-
-                  {
-    /* Floating Pins for Kasaragod services inside active coordinates */
-  }
-                  {selectedDistrict === "Kasaragod" && <>
-                      {
-    /* Sub-node representing active Manjeshwar locality */
-  }
-                      <div className="absolute left-[24%] top-[14%] z-20 flex flex-col items-center">
-                        <span className="absolute w-12 h-12 rounded-full border border-teal-500/40 animate-ping" style={{ animationDuration: "3s" }} />
-                        <div className="w-4 h-4 bg-teal-600 rounded-full border-2 border-white flex items-center justify-center shadow-md shadow-teal-500/30 animate-pulse">
-                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                        </div>
-                        <div className="bg-teal-900 text-white font-extrabold text-[8px] px-2 py-0.5 rounded shadow-lg border border-teal-500/30 mt-1 pointer-events-none whitespace-nowrap uppercase tracking-widest">
-                          Manjeshwar Grid
-                        </div>
-                      </div>
-                    </>}
-
-                  {
-    /* Floating Pins for Kozhikode services inside active coordinates */
-  }
-                  {selectedDistrict === "Kozhikode" && <>
-                      {
-    /* Sub-node representing Mukkali / Chombala */
-  }
-                      <div className="absolute left-[33%] top-[34%] z-20 flex flex-col items-center">
-                        <span className="absolute w-10 h-10 rounded-full border border-emerald-500/40 animate-ping" style={{ animationDuration: "3.5s" }} />
-                        <div className="w-3.5 h-3.5 bg-emerald-600 rounded-full border border-white flex items-center justify-center shadow-md shadow-emerald-500/30 animate-pulse">
-                          <div className="w-1 h-1 rounded-full bg-white" />
-                        </div>
-                        <div className="bg-emerald-950/95 text-emerald-300 font-extrabold text-[8px] px-1.5 py-0.5 rounded shadow-lg border border-emerald-500/30 mt-1 pointer-events-none whitespace-nowrap uppercase tracking-widest scale-90">
-                          Mukkali (Chombala)
-                        </div>
-                      </div>
-
-                      {
-    /* Sub-node representing Vadakara */
-  }
-                      <div className="absolute left-[36%] top-[39%] z-20 flex flex-col items-center">
-                        <span className="absolute w-10 h-10 rounded-full border border-sky-500/40 animate-ping" style={{ animationDuration: "2.8s" }} />
-                        <div className="w-3.5 h-3.5 bg-sky-600 rounded-full border-2 border-white flex items-center justify-center shadow-md shadow-sky-500/30 animate-pulse">
-                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                        </div>
-                        <div className="bg-sky-950/95 text-sky-300 font-extrabold text-[8px] px-1.5 py-0.5 rounded shadow-lg border border-sky-500/30 mt-1 pointer-events-none whitespace-nowrap uppercase tracking-widest scale-90">
-                          Vadakara Grid
-                        </div>
-                      </div>
-                    </>}
-
-                  {mapServices.slice(0, 8).map((service, idx) => {
-    const data = service.translations[language] || service.translations.en;
-    const x = 28 + idx * 9 % 38;
-    const y = 24 + idx * 13 % 48;
-    return <button
-      key={`map-${service.id}`}
-      onClick={() => setSelectedDetailService(service)}
-      style={{ left: `${x}%`, top: `${y}%` }}
-      className="absolute z-30 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group"
-      title={data.title}
-    >
-                        <span className={`w-7 h-7 rounded-full border-2 border-white flex items-center justify-center shadow-lg ${service.isEmergency ? "bg-rose-600 text-white" : "bg-emerald-700 text-white"}`}>
-                          {getCustomizedIcon(service)}
-                        </span>
-                        <span className="mt-1 max-w-[100px] truncate bg-white/95 text-slate-800 border border-slate-200 px-1.5 py-0.5 rounded text-[8px] font-black shadow-sm">
-                          {data.title}
-                        </span>
-                      </button>;
-  })}
-
-                </div>
-
-              </div>
-
-              {
-    /* Map instructions panel */
-  }
-              <div className="absolute bottom-18 md:bottom-20 inset-x-3 md:left-6 md:right-auto md:max-w-md bg-zinc-950/95 border border-zinc-800/80 p-3 rounded-2xl flex flex-col gap-1 select-none shadow-lg">
-                <span className="font-label text-[10px] font-black text-white uppercase tracking-wider">Kerala Grid Operations</span>
-                <p className="text-[9px] text-zinc-400 leading-tight">
-                  Drag the viewport to explore the coast. Showing {mapServices.length} services for the current map filter.
-                </p>
-              </div>
-
-            </div>}
-
-          {
-    /* Tab Content 3: Suggest local service form */
-  }
+          {currentTab === "map" && <Suspense fallback={<div className="flex-1 grid place-items-center bg-[#121214] text-zinc-300 text-xs font-black uppercase tracking-widest">Loading real map...</div>}>
+              <ServiceMap
+                services={filteredServices}
+                categoryOptions={categoryOptions}
+                mapCategoryFilter={mapCategoryFilter}
+                setMapCategoryFilter={setMapCategoryFilter}
+                getCategoryName={getCategoryName}
+                setSelectedDetailService={setSelectedDetailService}
+                ui={ui}
+              />
+            </Suspense>}
           {currentTab === "suggest" && <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-4 md:pt-6 pb-24 scrollbar-none">
               <div className="border-b border-zinc-800 pb-3 max-w-5xl mx-auto">
                 <h3 className="font-classical text-lg font-black text-white tracking-wide flex items-center gap-1.5">
@@ -1494,10 +1514,11 @@ Phone: ${service.phoneNumber}`;
               <form onSubmit={handleAddService} className="max-w-5xl mx-auto mt-4 grid gap-3.5 text-xs md:grid-cols-2">
                 
                 <div className="md:col-span-2">
-                  <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                  <label htmlFor="suggest-service-title" className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                     Service Title *
                   </label>
                   <input
+    id="suggest-service-title"
     type="text"
     required
     placeholder="e.g. Primary Health Centre Subcenter"
@@ -1509,10 +1530,11 @@ Phone: ${service.phoneNumber}`;
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:col-span-2">
                   <div>
-                    <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                    <label htmlFor="suggest-service-category" className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                       Category *
                     </label>
                     <select
+    id="suggest-service-category"
     value={newCategory}
     onChange={(e) => setNewCategory(e.target.value)}
     className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl px-2 py-2 focus:outline-none focus:border-emerald-500"
@@ -1526,10 +1548,11 @@ Phone: ${service.phoneNumber}`;
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                    <label htmlFor="suggest-service-phone" className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                       Phone Number *
                     </label>
                     <input
+    id="suggest-service-phone"
     type="tel"
     required
     placeholder="+91 XXXXX XXXXX"
@@ -1541,10 +1564,11 @@ Phone: ${service.phoneNumber}`;
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                  <label htmlFor="suggest-service-description" className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                     Description & Service details *
                   </label>
                   <textarea
+    id="suggest-service-description"
     required
     rows={2.5}
     placeholder="Describe what help, documents, or aids are provided here..."
@@ -1556,10 +1580,11 @@ Phone: ${service.phoneNumber}`;
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:col-span-2">
                   <div>
-                    <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                    <label htmlFor="suggest-service-hours" className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                       Operating Hours
                     </label>
                     <input
+    id="suggest-service-hours"
     type="text"
     placeholder="e.g. 9:00 AM - 4:00 PM"
     value={newHours}
@@ -1568,10 +1593,11 @@ Phone: ${service.phoneNumber}`;
   />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                    <label htmlFor="suggest-service-contact" className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                       Contact Name
                     </label>
                     <input
+    id="suggest-service-contact"
     type="text"
     placeholder="e.g. Sister Lakshmi"
     value={newContact}
@@ -1583,10 +1609,11 @@ Phone: ${service.phoneNumber}`;
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:col-span-2">
                   <div>
-                    <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                    <label htmlFor="suggest-service-district" className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                       District
                     </label>
                     <select
+    id="suggest-service-district"
     value={newDistrict}
     onChange={(e) => {
       setNewDistrict(e.target.value);
@@ -1599,10 +1626,11 @@ Phone: ${service.phoneNumber}`;
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                    <label htmlFor="suggest-service-locality" className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                       Locality
                     </label>
                     <select
+    id="suggest-service-locality"
     value={newLocality}
     onChange={(e) => setNewLocality(e.target.value)}
     className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl px-2 py-2 focus:outline-none focus:border-emerald-500"
@@ -1613,10 +1641,11 @@ Phone: ${service.phoneNumber}`;
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                  <label htmlFor="suggest-service-address" className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                     Landmark / Address
                   </label>
                   <input
+    id="suggest-service-address"
     type="text"
     placeholder="e.g. Opposite Local Library block"
     value={newLocation}
@@ -1676,7 +1705,10 @@ Phone: ${service.phoneNumber}`;
                     <span className="text-[9px] text-zinc-400 block">Use locally saved directory data</span>
                   </div>
                   <button
+    type="button"
     onClick={() => setIsOfflineMode(!isOfflineMode)}
+    aria-label="Use locally saved directory data"
+    aria-pressed={isOfflineMode}
     className={`p-2 rounded-xl transition ${isOfflineMode ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`}
   >
                     {isOfflineMode ? <WifiOff className="w-5 h-5" /> : <Wifi className="w-5 h-5" />}
@@ -1691,8 +1723,9 @@ Phone: ${service.phoneNumber}`;
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block mb-1">District</label>
+                      <label htmlFor="profile-district" className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block mb-1">District</label>
                       <select
+    id="profile-district"
     value={selectedDistrict}
     onChange={(e) => {
       setSelectedDistrict(e.target.value);
@@ -1707,8 +1740,9 @@ Phone: ${service.phoneNumber}`;
                     </div>
 
                     <div>
-                      <label className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block mb-1">Locality</label>
+                      <label htmlFor="profile-locality" className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block mb-1">Locality</label>
                       <select
+    id="profile-locality"
     value={selectedLocality}
     onChange={(e) => setSelectedLocality(e.target.value)}
     className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-lg p-1.5 text-[10px] outline-none"
@@ -1730,6 +1764,7 @@ Phone: ${service.phoneNumber}`;
                       <span className="text-[9px] text-zinc-400 block">Sort and filter by approximate distance</span>
                     </div>
                     <button
+    type="button"
     onClick={() => {
       const nextVal = !isNearMeActive;
       setIsNearMeActive(nextVal);
@@ -1738,6 +1773,8 @@ Phone: ${service.phoneNumber}`;
         setSelectedLocality("all");
       }
     }}
+    aria-label="Sort and filter by approximate distance"
+    aria-pressed={isNearMeActive}
     className={`p-2 rounded-xl transition ${isNearMeActive ? "bg-amber-500/20 text-amber-300" : "bg-zinc-950 text-zinc-500"}`}
   >
                       <Compass className="w-5 h-5 animate-spin" style={{ animationDuration: isNearMeActive ? "8s" : "0s" }} />
@@ -1770,7 +1807,7 @@ Phone: ${service.phoneNumber}`;
                 <span className="font-black text-white block uppercase tracking-wider">Local Data Status</span>
                 <div className="flex justify-between font-mono text-[10px]">
                   <span>Directory records:</span>
-                  <span className="text-emerald-400">1,000 services</span>
+                  <span className="text-emerald-400">{services.length.toLocaleString("en-IN")} services</span>
                 </div>
                 <div className="flex justify-between font-mono text-[10px]">
                   <span>Saved in browser:</span>
@@ -1785,14 +1822,18 @@ Phone: ${service.phoneNumber}`;
               <div className="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-4 text-[11px] text-zinc-400 space-y-3">
                 <span className="font-black text-white block uppercase tracking-wider">{ui.accessibility}</span>
                 <button
+    type="button"
     onClick={() => setIsLargeText(!isLargeText)}
+    aria-pressed={isLargeText}
     className={`w-full flex items-center justify-between rounded-xl border px-3 py-2 transition ${isLargeText ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-zinc-950 border-zinc-800 text-zinc-300"}`}
   >
                   <span className="flex items-center gap-2 font-bold"><Type className="w-4 h-4" />{ui.largeText}</span>
                   <span>{isLargeText ? "On" : "Off"}</span>
                 </button>
                 <button
+    type="button"
     onClick={() => setIsHighContrast(!isHighContrast)}
+    aria-pressed={isHighContrast}
     className={`w-full flex items-center justify-between rounded-xl border px-3 py-2 transition ${isHighContrast ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-zinc-950 border-zinc-800 text-zinc-300"}`}
   >
                   <span className="flex items-center gap-2 font-bold"><Eye className="w-4 h-4" />{ui.highContrast}</span>
@@ -1804,13 +1845,19 @@ Phone: ${service.phoneNumber}`;
     /* Reset State Button */
   }
               <button
+    type="button"
     onClick={() => {
       setSearchQuery("");
       setSelectedCategory("all");
-      setSelectedDistrict("Kasaragod");
-      setSelectedLocality("Manjeshwar");
+      setMapCategoryFilter("all");
+      setSelectedDistrict("Kozhikode");
+      setSelectedLocality("Mukkali");
       setIsNearMeActive(false);
+      setNearMeDistance(30);
+      setSortByProximity(false);
       setIsOfflineMode(false);
+      setIsLargeText(false);
+      setIsHighContrast(false);
     }}
     className="w-full py-2.5 bg-zinc-900 border border-zinc-800 hover:text-white transition rounded-xl text-zinc-400 text-[10px] font-black uppercase tracking-widest mt-2"
   >
@@ -1820,6 +1867,8 @@ Phone: ${service.phoneNumber}`;
 
             </div>}
 
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {
@@ -1831,6 +1880,8 @@ Phone: ${service.phoneNumber}`;
     const detailData = selectedDetailService.translations[activeDetailLang] || selectedDetailService.translations["en"];
     const historyLogs = getServiceHistory(selectedDetailService);
     const guidelines = getServiceGuidelines(selectedDetailService);
+    const detailVerificationScore = getVerificationScore(selectedDetailService, duplicateCounts);
+    const detailDuplicateCount = getDuplicateCount(selectedDetailService, duplicateCounts);
     const isRecentVerified = (() => {
       if (!selectedDetailService.lastVerified) return false;
       try {
@@ -1862,6 +1913,9 @@ Phone: ${service.phoneNumber}`;
       animate={{ y: 0 }}
       exit={{ y: "100%" }}
       transition={{ type: "spring", damping: 30, stiffness: 400 }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="service-detail-title"
       className="absolute inset-x-0 bottom-0 max-h-[85%] md:inset-x-auto md:right-0 md:top-0 md:bottom-0 md:h-full md:w-[min(460px,42vw)] md:max-h-none bg-zinc-950 border-t md:border-t-0 md:border-l border-zinc-800 rounded-t-[32px] md:rounded-none shadow-[0_-12px_42px_rgba(0,0,0,0.85)] md:shadow-[-18px_0_42px_rgba(0,0,0,0.45)] z-50 flex flex-col overflow-hidden text-zinc-100 font-sans"
     >
                   
@@ -1882,12 +1936,14 @@ Phone: ${service.phoneNumber}`;
                         <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest block leading-none mb-1">
                           {getCategoryName(selectedDetailService.categoryKey)}
                         </span>
-                        <h4 className="font-classical text-sm sm:text-base font-black truncate text-white leading-tight">
+                        <h4 id="service-detail-title" className="font-classical text-sm sm:text-base font-black text-white leading-tight">
                           {detailData.title}
                         </h4>
                       </div>
                     </div>
                     <button
+      type="button"
+      aria-label="Close service details"
       onClick={() => {
         setSelectedDetailService(null);
         setDetailPreviewLang(null);
@@ -1944,6 +2000,17 @@ Phone: ${service.phoneNumber}`;
                         <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider block mb-0.5">Location</span>
                         <p className="text-[10px] text-zinc-300 leading-tight font-medium">{detailData.location}</p>
                       </div>
+                      <div>
+                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider block mb-0.5">Verification score</span>
+                        <span className="font-bold text-white block">{detailVerificationScore}% - {getConfidenceLevel(detailVerificationScore)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider block mb-0.5">Last checked by</span>
+                        <span className="font-bold text-white block">{getLastCheckedBy(selectedDetailService)}</span>
+                      </div>
+                      {detailDuplicateCount > 1 && <div className="sm:col-span-2 md:col-span-1 xl:col-span-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-2 text-[10px] font-bold text-amber-200">
+                        Possible duplicate found in this locality. Verify before publishing changes.
+                      </div>}
                     </div>
 
                     {
@@ -2055,14 +2122,17 @@ Phone: ${service.phoneNumber}`;
     initial={{ opacity: 0, scale: 0.96, y: 12 }}
     animate={{ opacity: 1, scale: 1, y: 0 }}
     exit={{ opacity: 0, scale: 0.96, y: 12 }}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="report-dialog-title"
     className="absolute z-[61] left-4 right-4 top-24 md:left-1/2 md:right-auto md:w-[420px] md:-translate-x-1/2 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl p-4 text-zinc-100"
   >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-classical text-lg font-black text-white">{ui.reportTitle}</h3>
+                    <h3 id="report-dialog-title" className="font-classical text-lg font-black text-white">{ui.reportTitle}</h3>
                     <p className="text-xs text-zinc-400 mt-1">{ui.reportHint}</p>
                   </div>
-                  <button onClick={() => setReportService(null)} className="p-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white">
+                  <button type="button" aria-label="Close report dialog" onClick={() => setReportService(null)} className="p-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -2089,14 +2159,14 @@ Phone: ${service.phoneNumber}`;
         {
     /* Global Floating Toast for successful directory additions */
   }
-        {successToast && <div className="absolute top-20 inset-x-6 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-center text-[10px] font-extrabold uppercase tracking-widest animate-bounce">
+        {successToast && <div role="status" aria-live="polite" className="absolute top-20 inset-x-6 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-center text-[10px] font-extrabold uppercase tracking-widest animate-bounce">
             {successToast}
           </div>}
 
         {
     /* Static virtual bottom nav tab row (matching screenshots) */
   }
-        <div className="bottom-dock absolute bottom-0 inset-x-0 h-16 border-t border-zinc-800/85 flex items-center justify-around z-40 px-3 md:px-10 select-none">
+        <div className="bottom-dock app-dock absolute bottom-0 inset-x-0 border-t border-zinc-800/85 flex items-center justify-around z-40 px-2 select-none" role="tablist" aria-label="Main app tabs">
           {[
     { id: "services", label: ui.services, icon: <Building2 className="w-5 h-5" /> },
     { id: "emergency", label: ui.emergency, icon: <Siren className="w-5 h-5" /> },
@@ -2107,7 +2177,12 @@ Phone: ${service.phoneNumber}`;
     const isActive = currentTab === tab.id;
     return <button
       key={tab.id}
-      onClick={() => setCurrentTab(tab.id)}
+      type="button"
+      onClick={() => navigateToTab(tab.id)}
+      role="tab"
+      aria-selected={isActive}
+      aria-current={isActive ? "page" : undefined}
+      aria-label={`Open ${tab.label}`}
       className={`dock-button ${isActive ? "is-active" : ""} flex flex-col items-center justify-center gap-1 flex-1 py-1 transition cursor-pointer select-none active:scale-95 ${isActive ? "text-emerald-400 font-bold" : "text-zinc-500 hover:text-zinc-300"}`}
     >
                 {tab.icon}
