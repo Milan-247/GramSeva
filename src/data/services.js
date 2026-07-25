@@ -935,6 +935,10 @@ const AZHIYUR_SUB_LOCALITIES = [
   { en: "Andicompany", ml: "അണ്ടി കമ്പനി", hi: "अंडी कंपनी", te: "అండి కంపెనీ" }
 ];
 
+if (!AZHIYUR_SUB_LOCALITIES.some(l => l.en === "Azhiyur")) {
+  AZHIYUR_SUB_LOCALITIES.unshift({ en: "Azhiyur", ml: "അഴിയൂർ", hi: "अझीयूर", te: "അളീയూర్" });
+}
+
 const KERALA_DISTRICTS = [
   { en: "Thiruvananthapuram", ml: "\u0D24\u0D3F\u0D30\u0D41\u0D35\u0D28\u0D28\u0D4D\u0D24\u0D2A\u0D41\u0D30\u0D02", te: "\u0C24\u0C3F\u0C30\u0C41\u0C35\u0C28\u0C02\u0C24\u0C2A\u0C41\u0C30\u0C02", hi: "\u0924\u093F\u0930\u0941\u0935\u0928\u0902\u0924\u092A\u0941\u0930\u092E" },
   { en: "Kollam", ml: "\u0D15\u0D4A\u0D32\u0D4D\u0D32\u0D02", te: "\u0C15\u0C4A\u0C32\u0C4D\u0C32\u0C3E\u0C02", hi: "\u0915\u094B\u0932\u094D\u0932\u092E" },
@@ -1233,6 +1237,7 @@ function generateRemainingServices() {
       lastVerified,
       isEmergency,
       districtName: district.en,
+      panchayatName: isMainlyTargeted ? "Azhiyur" : localityNameEn,
       localityName: localityNameEn,
       translations: {
         ml: {
@@ -1276,6 +1281,7 @@ const INITIAL_SERVICES = generateRemainingServices();
 export {
   INITIAL_SERVICES,
   KERALA_DISTRICTS,
+  AZHIYUR_SUB_LOCALITIES,
   LOCALITIES_EN,
   LOCALITIES_HI,
   LOCALITIES_ML,

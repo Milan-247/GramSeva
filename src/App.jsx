@@ -68,6 +68,7 @@ import graamsevaLogo from "./assets/graamseva-logo.svg";
 import {
   INITIAL_SERVICES,
   KERALA_DISTRICTS,
+  AZHIYUR_SUB_LOCALITIES,
   LOCALITIES_EN
 } from "./data/services";
 
@@ -75,6 +76,7 @@ import { DirectorySkeleton, MapSkeleton } from "./components/Skeletons.jsx";
 import LanguageWheel from "./components/LanguageWheel.jsx";
 
 const ServiceMap = lazy(() => import("./components/ServiceMap.jsx"));
+const CertificateResolver = lazy(() => import("./components/CertificateResolver.jsx"));
 
 const CATEGORY_ALIASES = {
   health: ["hospital", "clinic", "doctor", "medical", "ambulance", "phc", "fhc", "health centre", "arogya", "ആരോഗ്യം", "ആശുപത്രി", "ಆರೋಗ್ಯ", "ಆಸ್ಪತ್ರೆ", "स्वास्थ्य", "अस्पताल", "వైద్యం", "ఆసుపత్రి"],
@@ -172,6 +174,7 @@ function DirectoryApp() {
     en: {
       emergency: "Emergency",
       services: "Services",
+      resolver: "Cert Resolver",
       map: "Map",
       suggest: "Suggest",
       profile: "Profile",
@@ -197,6 +200,7 @@ function DirectoryApp() {
     ml: {
       emergency: "\u0D05\u0D1F\u0D3F\u0D2F\u0D28\u0D4D\u0D24\u0D3F\u0D30\u0D02",
       services: "\u0D38\u0D47\u0D35\u0D28\u0D19\u0D4D\u0D19\u0D7E",
+      resolver: "സർട്ടിഫിക്കറ്റ് സോൾവർ",
       map: "\u0D2E\u0D3E\u0D2A\u0D4D\u0D2A\u0D4D",
       suggest: "\u0D28\u0D3F\u0D7C\u0D26\u0D4D\u0D26\u0D47\u0D36\u0D02",
       profile: "\u0D2A\u0D4D\u0D30\u0D4A\u0D2B\u0D48\u0D7D",
@@ -222,6 +226,7 @@ function DirectoryApp() {
     hi: {
       emergency: "\u0906\u092A\u093E\u0924\u0915\u093E\u0932",
       services: "\u0938\u0947\u0935\u093E\u090F\u0902",
+      resolver: "प्रमाणपत्र हल",
       map: "\u092E\u0948\u092A",
       suggest: "\u0938\u0941\u091D\u093E\u0935",
       profile: "\u092A\u094D\u0930\u094B\u092B\u093E\u0907\u0932",
@@ -247,6 +252,7 @@ function DirectoryApp() {
     te: {
       emergency: "\u0C05\u0C24\u0C4D\u0C2F\u0C35\u0C38\u0C30\u0C02",
       services: "\u0C38\u0C47\u0C35\u0C32\u0C41",
+      resolver: "సర్టిఫికేట్ పరిష్కారం",
       map: "\u0C2E\u0C4D\u0C2F\u0C3E\u0C2A\u0C4D",
       suggest: "\u0C38\u0C42\u0C1A\u0C3F\u0C02\u0C1A\u0C02\u0C21\u0C3F",
       profile: "\u0C2A\u0C4D\u0C30\u0C4A\u0C2B\u0C48\u0C32\u0C4D",
@@ -1022,7 +1028,14 @@ Phone: ${service.phoneNumber}`;
         }
       }
       if (selectedDistrict !== "all" && service.districtName !== selectedDistrict) return false;
-      if (selectedLocality !== "all" && service.localityName !== selectedLocality) return false;
+      if (selectedLocality !== "all") {
+        if (selectedLocality === "Azhiyur" || selectedLocality.toLowerCase().includes("azhiyur")) {
+          const isAzhiyurPanchayat = service.panchayatName === "Azhiyur" || service.localityName === "Azhiyur" || AZHIYUR_SUB_LOCALITIES.some((sub) => sub.en === service.localityName);
+          if (!isAzhiyurPanchayat) return false;
+        } else if (service.localityName !== selectedLocality) {
+          return false;
+        }
+      }
       if (isNearMeActive && getSimulatedDistance(service) > nearMeDistance) return false;
       return !normalizedSearchQuery || searchScore > 0;
     })
@@ -1255,46 +1268,109 @@ Phone: ${service.phoneNumber}`;
           </div>
 
           {
-    /* Primary search input */
+    /* Primary search & Location filter row */
   }
-          <div className="relative md:max-w-3xl">
-            <div className={`service-search bg-white flex items-center mt-1 sm:mt-3 border rounded-xl shadow-sm ${isSearchFocused ? "is-focused" : ""} ${searchQuery !== settledSearchQuery ? "is-searching" : ""}`}>
-              <Search className="w-4 h-4 text-slate-400 ml-2.5 sm:ml-3 shrink-0" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                aria-busy={searchQuery !== settledSearchQuery}
-                aria-label="Search services by name, category, place, contact, or language"
-                placeholder={t.searchPlaceholder || "Search services..."}
-                value={searchQuery}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setTimeout(() => setIsSearchFocused(false), 140)}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full text-slate-800 placeholder-slate-400 bg-transparent text-xs sm:text-sm py-2 sm:py-2.5 px-2 outline-none border-none leading-none font-semibold min-h-[38px] sm:min-h-[42px]"
-              />
-              {searchQuery ? (
-                <button onClick={() => setSearchQuery("")} className="search-clear" aria-label="Clear search">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              ) : (
-                <span className="search-shortcut" aria-hidden="true"><Keyboard className="w-3.5 h-3.5" /> /</span>
+          <div className="flex flex-wrap md:flex-nowrap items-center gap-2 mt-1 sm:mt-2">
+            <div className="relative flex-1 min-w-[220px]">
+              <div className={`service-search bg-white flex items-center border rounded-xl shadow-sm ${isSearchFocused ? "is-focused" : ""} ${searchQuery !== settledSearchQuery ? "is-searching" : ""}`}>
+                <Search className="w-4 h-4 text-slate-400 ml-2.5 sm:ml-3 shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  aria-busy={searchQuery !== settledSearchQuery}
+                  aria-label="Search services by name, category, place, contact, or language"
+                  placeholder={t.searchPlaceholder || "Search services..."}
+                  value={searchQuery}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 140)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full text-slate-800 placeholder-slate-400 bg-transparent text-xs sm:text-sm py-2 sm:py-2.5 px-2 outline-none border-none leading-none font-semibold min-h-[38px] sm:min-h-[42px]"
+                />
+                {searchQuery ? (
+                  <button onClick={() => setSearchQuery("")} className="search-clear" aria-label="Clear search">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <span className="search-shortcut" aria-hidden="true"><Keyboard className="w-3.5 h-3.5" /> /</span>
+                )}
+              </div>
+              {isSearchFocused && searchSuggestions.length > 0 && (
+                <div className="search-suggestions absolute top-full mt-2 left-0 right-0 z-40 bg-white/95 text-slate-900 border border-slate-200 rounded-xl shadow-xl p-2">
+                  <div className="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">{ui.searchSuggestions}</div>
+                  {searchSuggestions.map((item) => (
+                    <button
+                      key={item.id}
+                      onMouseDown={() => setSearchQuery(item.label)}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-100 transition flex items-center justify-between gap-3"
+                    >
+                      <span className="text-xs font-bold truncate">{item.label}</span>
+                      <span className="text-[10px] text-emerald-700 font-bold shrink-0">{item.helper}</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-            {isSearchFocused && searchSuggestions.length > 0 && (
-              <div className="search-suggestions absolute top-full mt-2 left-0 right-0 z-40 bg-white/95 text-slate-900 border border-slate-200 rounded-xl shadow-xl p-2">
-                <div className="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">{ui.searchSuggestions}</div>
-                {searchSuggestions.map((item) => (
-                  <button
-                    key={item.id}
-                    onMouseDown={() => setSearchQuery(item.label)}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-100 transition flex items-center justify-between gap-3"
-                  >
-                    <span className="text-xs font-bold truncate">{item.label}</span>
-                    <span className="text-[10px] text-emerald-700 font-bold shrink-0">{item.helper}</span>
-                  </button>
-                ))}
+
+            {/* District & Locality Selectors */}
+            <div className="flex items-center gap-1.5 shrink-0 w-full md:w-auto overflow-x-auto scrollbar-none py-0.5">
+              <div className="flex items-center gap-1 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0">
+                <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <select
+                  value={selectedDistrict}
+                  onChange={(e) => {
+                    const dist = e.target.value;
+                    setSelectedDistrict(dist);
+                    if (dist === "Kozhikode") {
+                      setSelectedLocality("Azhiyur");
+                    } else if (dist === "all") {
+                      setSelectedLocality("all");
+                    } else {
+                      const firstLoc = LOCALITIES_EN[dist]?.[0] || "all";
+                      setSelectedLocality(firstLoc);
+                    }
+                  }}
+                  className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer border-none py-0 pr-1 [&>option]:bg-slate-900 [&>option]:text-white"
+                  aria-label="Select District"
+                >
+                  <option value="all">All Districts</option>
+                  {KERALA_DISTRICTS.map((dist) => (
+                    <option key={dist.en} value={dist.en}>
+                      {dist[language] || dist.en}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
+
+              <div className="flex items-center gap-1 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0">
+                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <select
+                  value={selectedLocality}
+                  onChange={(e) => setSelectedLocality(e.target.value)}
+                  className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer border-none py-0 pr-1 [&>option]:bg-slate-900 [&>option]:text-white max-w-[170px] truncate"
+                  aria-label="Select Locality or Panchayat"
+                >
+                  <option value="all">All Places in {selectedDistrict === "all" ? "Kerala" : selectedDistrict}</option>
+                  {selectedDistrict === "Kozhikode" && (
+                    <option value="Azhiyur" className="font-extrabold text-emerald-300">
+                      Azhiyur Panchayat (All Places)
+                    </option>
+                  )}
+                  {selectedDistrict === "Kozhikode" ? (
+                    AZHIYUR_SUB_LOCALITIES.map((loc) => (
+                      <option key={loc.en} value={loc.en}>
+                        {loc.en === "Azhiyur" ? "— Azhiyur Town" : `— ${loc[language] || loc.en}`}
+                      </option>
+                    ))
+                  ) : (
+                    (LOCALITIES_EN[selectedDistrict] || []).map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            </div>
           </div>
 
         </header>
@@ -1320,55 +1396,53 @@ Phone: ${service.phoneNumber}`;
               {
     /* Category Horizontal Filter Row */
   }
-              <div className="category-strip flex items-center overflow-x-auto gap-1.5 px-3 sm:px-5 lg:px-6 py-1.5 border-b border-zinc-800/80 scrollbar-none shrink-0 select-none sticky top-0 z-20" role="toolbar" aria-label="Filter services by category">
-                <div className="flex items-center gap-1 shrink-0 pr-1.5 border-r border-zinc-700/60 mr-0.5 text-emerald-400 font-extrabold text-[10px] uppercase tracking-wider">
-                  <Filter className="w-3 h-3" />
-                  <span className="hidden xs:inline">Category</span>
-                </div>
-                {categoryOptions.map((cat) => {
-                  const isActive = selectedCategory === cat.key;
-                  return (
-                    <button
-                      key={cat.key}
-                      onClick={() => chooseCategory(cat.key)}
-                      aria-pressed={isActive}
-                      aria-label={`Show ${cat.label} services`}
-                      className={`category-pill ${isActive ? "is-active" : ""} flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap border shrink-0 active:scale-95`}
-                    >
-                      {cat.icon}
-                      <span className="font-label text-[11px] whitespace-nowrap">{cat.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="interaction-rail px-3 sm:px-5 lg:px-6 py-1 sm:py-1.5 border-b border-zinc-800/70 overflow-x-auto scrollbar-none">
-                <div className="flex items-center justify-end gap-2.5 min-w-max sm:min-w-0">
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setGroupByPlace((value) => !value)}
-                      className={`rail-action flex items-center gap-1 shrink-0 ${groupByPlace ? "is-active bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : ""}`}
-                      aria-pressed={groupByPlace}
-                    >
-                      <Building2 className="w-3.5 h-3.5" />
-                      <span>Group by Place</span>
-                    </button>
-                    <button type="button" onClick={() => setSortByProximity((value) => !value)} className={`rail-action shrink-0 ${sortByProximity ? "is-active" : ""}`} aria-pressed={sortByProximity}>Nearest first</button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearchQuery("");
-                        setSelectedCategory("all");
-                        setSelectedDistrict("Kozhikode");
-                        setSelectedLocality("Azhiyur");
-                        setSortByProximity(false);
-                      }}
-                      className="rail-action shrink-0"
-                    >
-                      Reset
-                    </button>
+              <div className="category-strip flex items-center justify-between overflow-x-auto gap-2 px-3 sm:px-5 lg:px-6 py-1.5 border-b border-zinc-800/80 scrollbar-none shrink-0 select-none sticky top-0 z-20" role="toolbar" aria-label="Filter services by category">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0 pr-1.5 border-r border-zinc-700/60 mr-0.5 text-emerald-400 font-extrabold text-[10px] uppercase tracking-wider">
+                    <Filter className="w-3 h-3" />
+                    <span className="hidden xs:inline">Category</span>
                   </div>
+                  {categoryOptions.map((cat) => {
+                    const isActive = selectedCategory === cat.key;
+                    return (
+                      <button
+                        key={cat.key}
+                        onClick={() => chooseCategory(cat.key)}
+                        aria-pressed={isActive}
+                        aria-label={`Show ${cat.label} services`}
+                        className={`category-pill ${isActive ? "is-active" : ""} flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap border shrink-0 active:scale-95`}
+                      >
+                        {cat.icon}
+                        <span className="font-label text-[11px] whitespace-nowrap">{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pl-2 border-l border-zinc-300/80 dark:border-zinc-700/60 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => setGroupByPlace((value) => !value)}
+                    className={`rail-action flex items-center gap-1 shrink-0 ${groupByPlace ? "is-active bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : ""}`}
+                    aria-pressed={groupByPlace}
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>Group by Place</span>
+                  </button>
+                  <button type="button" onClick={() => setSortByProximity((value) => !value)} className={`rail-action shrink-0 ${sortByProximity ? "is-active" : ""}`} aria-pressed={sortByProximity}>Nearest first</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedCategory("all");
+                      setSelectedDistrict("Kozhikode");
+                      setSelectedLocality("Azhiyur");
+                      setSortByProximity(false);
+                    }}
+                    className="rail-action shrink-0"
+                  >
+                    Reset
+                  </button>
                 </div>
               </div>
 
@@ -1749,6 +1823,13 @@ Phone: ${service.phoneNumber}`;
                 )}
               </div>
             </>}
+
+          {/* Tab Content: Certificate Dependency Resolver (AO* Graph Search) */}
+          {currentTab === "resolver" && (
+            <Suspense fallback={<DirectorySkeleton />}>
+              <CertificateResolver language={language} />
+            </Suspense>
+          )}
 
           {
     /* Tab Content 2: Full interactive vector map */
@@ -2448,6 +2529,7 @@ Phone: ${service.phoneNumber}`;
         <div className="bottom-dock app-dock absolute bottom-0 inset-x-0 border-t border-stone-200 flex items-center justify-around z-40 px-1 sm:px-2 select-none pb-safe bg-white/95 backdrop-blur-md" role="tablist" aria-label="Main app tabs">
           {[
     { id: "services", label: ui.services, icon: <Building2 className="w-5 h-5" /> },
+    { id: "resolver", label: ui.resolver || "Resolver", icon: <FileCheck2 className="w-5 h-5" /> },
     { id: "map", label: ui.map, icon: <Compass className="w-5 h-5" /> },
     { id: "suggest", label: ui.suggest, icon: <Plus className="w-5 h-5" /> },
     { id: "profile", label: ui.profile, icon: <User className="w-5 h-5" /> }
