@@ -1,3 +1,5 @@
+import { KERALA_DISTRICTS_LIST, KERALA_PANCHAYATS_BY_DISTRICT } from "./keralaPanchayatsData.js";
+
 const SUPPORTED_LANGUAGES = [
   { code: "ml", name: "Malayalam", nativeName: "\u0D2E\u0D32\u0D2F\u0D3E\u0D33\u0D02", flag: "\u{1F334}" },
   { code: "en", name: "English", nativeName: "English", flag: "\u{1F1EE}\u{1F1F3}" },
@@ -1026,258 +1028,263 @@ const LOCALITIES_TE = {
   "Thrissur": ["\u0C1A\u0C3E\u0C32\u0C15\u0C41\u0C21\u0C3F", "\u0C15\u0C41\u0C28\u0C4D\u0C28\u0C02\u0C15\u0C41\u0C33\u0C02", "\u0C17\u0C41\u0C30\u0C41\u0C35\u0C3E\u0C2F\u0C42\u0C30\u0C4D", "\u0C15\u0C4B\u0C26\u0C41\u0C02\u0C17\u0C32\u0C4D\u0C32\u0C42\u0C30\u0C4D", "\u0C35\u0C21\u0C15\u0C4D\u0C15\u0C02\u0C1A\u0C47\u0C30\u0C3F", "\u0C1A\u0C3E\u0C35\u0C15\u0C4D\u0C15\u0C3E\u0C21\u0C4D", "\u0C07\u0C30\u0C3F\u0C02\u0C1C\u0C32\u0C15\u0C41\u0C21", "\u0C35\u0C3E\u0C1F\u0C28\u0C3E\u0C2A\u0C32\u0C4D\u0C32\u0C3F"],
   "Palakkad": ["\u0C12\u0C1F\u0C4D\u0C1F\u0C2A\u0C3E\u0C32\u0C02", "\u0C37\u0C4B\u0C30\u0C28\u0C42\u0C30\u0C4D", "\u0C1A\u0C3F\u0C24\u0C4D\u0C24\u0C42\u0C30\u0C4D", "\u0C05\u0C32\u0C24\u0C4D\u0C24\u0C42\u0C30\u0C4D", "\u0C2E\u0C28\u0C4D\u0C28\u0C3E\u0C30\u0C4D\u0C15\u0C4D\u0C15\u0C3E\u0C21\u0C4D", "\u0C1A\u0C47\u0C30\u0C4D\u0C2A\u0C41\u0C32\u0C38\u0C4D\u0C38\u0C47\u0C30\u0C3F", "\u0C2A\u0C1F\u0C4D\u0C1F\u0C3E\u0C02\u0C2C\u0C3F", "\u0C35\u0C21\u0C15\u0C4D\u0C15\u0C02\u0C1A\u0C47\u0C30\u0C3F"],
   "Malappuram": ["\u0C2E\u0C02\u0C1C\u0C47\u0C30\u0C3F", "\u0C24\u0C3F\u0C30\u0C42\u0C30\u0C4D", "\u0C2A\u0C4A\u0C28\u0C4D\u0C28\u0C3E\u0C28\u0C3F", "\u0C15\u0C4A\u0C1F\u0C4D\u0C1F\u0C15\u0C4D\u0C15\u0C32\u0C4D", "\u0C2A\u0C46\u0C30\u0C3F\u0C02\u0C24\u0C32\u0C4D\u0C2E\u0C28\u0C4D\u0C28", "\u0C28\u0C3F\u0C32\u0C02\u0C2C\u0C42\u0C30\u0C4D", "\u0C15\u0C4A\u0C02\u0C21\u0C4B\u0C1F\u0C4D\u0C1F\u0C3F", "\u0C35\u0C32\u0C02\u0C1A\u0C47\u0C30\u0C3F"],
-  "Kozhikode": ["\u0C15\u0C4B\u0C2F\u0C3F\u0C32\u0C3E\u0C02\u0C21\u0C3F", "\u0C35\u0C26\u0C15\u0C30", "\u0C1A\u0C4B\u0C02\u0C2C\u0C3E\u0C32", "\u0C2E\u0C41\u0C15\u0C4D\u0C15\u0C3E\u0C33\u0C3F", "\u0C2E\u0C41\u0C15\u0C4D\u0C15\u0C02", "\u0C30\u0C3E\u0C2E\u0C28\u0C3E\u0C1F\u0C4D\u0C1F\u0C41\u0C15\u0C30", "\u0C2B\u0C46\u0C30\u0C4B\u0C15\u0C4D", "\u0C15\u0C4B\u0C21\u0C41\u0C35\u0C32\u0C4D\u0C32\u0C3F", "\u0C2A\u0C2F\u0C4D\u0C2F\u0C4B\u0C32\u0C3F", "\u0C15\u0C41\u0C28\u0C4D\u0C28\u0C2E\u0C02\u0C17\u0C33\u0C02"],
-  "Wayanad": ["\u0C15\u0C32\u0C4D\u0C2A\u0C47\u0C1F\u0C3E", "\u0C2E\u0C3E\u0C28\u0C02\u0C24\u0C35\u0C3E\u0C21\u0C3F", "\u0C38\u0C41\u0C32\u0C4D\u0C24\u0C3E\u0C28\u0C4D \u0C2C\u0C24\u0C47\u0C30\u0C3F", "\u0C35\u0C48\u0C24\u0C3F\u0C30\u0C3F", "\u0C2E\u0C47\u0C2A\u0C4D\u0C2A\u0C3E\u0C21\u0C3F", "\u0C2A\u0C4B\u0C1C\u0C41\u0C24\u0C3E\u0C28", "\u0C2A\u0C28\u0C2E\u0C30\u0C02", "\u0C2A\u0C41\u0C32\u0C4D\u0C2A\u0C32\u0C4D\u0C32\u0C3F"],
-  "Kannur": ["\u0C24\u0C32\u0C38\u0C4D\u0C38\u0C47\u0C30\u0C3F", "\u0C24\u0C32\u0C3F\u0C2A\u0C30\u0C02\u0C2C", "\u0C2A\u0C2F\u0C4D\u0C2F\u0C28\u0C4D\u0C28\u0C42\u0C30\u0C4D", "\u0C07\u0C30\u0C3F\u0C1F\u0C4D\u0C1F\u0C3F", "\u0C2E\u0C1F\u0C4D\u0C1F\u0C28\u0C4D\u0C28\u0C42\u0C30\u0C4D", "\u0C15\u0C42\u0C24\u0C41\u0C2A\u0C30\u0C02\u0C2C", "\u0C05\u0C32\u0C15\u0C4B\u0C21\u0C4D", "\u0C1A\u0C15\u0C4D\u0C15\u0C30\u0C15\u0C4D\u0C15\u0C32\u0C4D"],
-  "Kasaragod": ["\u0C15\u0C28\u0C4D\u0C39\u0C02\u0C17\u0C3E\u0C21\u0C4D", "\u0C28\u0C40\u0C32\u0C47\u0C36\u0C4D\u0C35\u0C30\u0C02", "\u0C09\u0C2A\u0C4D\u0C2A\u0C32", "\u0C2E\u0C02\u0C1C\u0C47\u0C36\u0C4D\u0C35\u0C30\u0C4D", "\u0C24\u0C4D\u0C30\u0C3F\u0C15\u0C30\u0C3F\u0C2A\u0C42\u0C30\u0C4D", "\u0C15\u0C41\u0C02\u0C2C\u0C32", "\u0C2C\u0C26\u0C3F\u0C2F\u0C21\u0C4D\u0C15", "\u0C1A\u0C46\u0C30\u0C41\u0C35\u0C24\u0C4D\u0C24\u0C42\u0C30\u0C41"]
+  "Kozhikode": ["Koyilandy", "Vadakara"],
+  "Wayanad": ["Kalpetta", "Mananthavady"],
+  "Kannur": ["Thalassery", "Taliparamba"],
+  "Kasaragod": ["Kanhangad", "Nileshwaram"]
 };
 
+
 const REPRESENTATIVE_NAMES = [
-  { en: "Dr. Suresh Kumar", ml: "\u0D21\u0D4B. \u0D38\u0D41\u0D30\u0D47\u0D37\u0D4D \u0D15\u0D41\u0D2E\u0D3E\u0D7C", hi: "\u0921\u0949. Suresh Kumar", te: "\u0C21\u0C3E\u0C15\u0C4D\u0C1F\u0C30\u0C4D \u0C38\u0C41\u0C30\u0C47\u0C37\u0C4D \u0C15\u0C41\u0C2E\u0C3E\u0C30\u0C4D" },
-  { en: "Smt. Mini Joy", ml: "\u0D36\u0D4D\u0D30\u0D40\u0D2E\u0D24\u0D3F \u0D2E\u0D3F\u0D28\u0D3F \u0D1C\u0D4B\u0D2F\u0D4D", hi: "\u0936\u094D\u0930\u0940\u092E\u0924\u0940 Mini Joy", te: "\u0C36\u0C4D\u0C30\u0C40\u0C2E\u0C24\u0C3F \u0C2E\u0D3F\u0D28\u0D3F \u0C1C\u0C3E\u0C2F\u0C4D" },
-  { en: "Shri. Shaji Varghese", ml: "\u0D36\u0D4D\u0D30\u0D40. \u0D37\u0D3E\u0D1C\u0D3F \u0D35\u0D7C\u0D17\u0D40\u0D38\u0D4D", hi: "\u0936\u094D\u0930\u0940 Shaji Varghese", te: "\u0C36\u0C4D\u0C30\u0C40 \u0C37\u0C3E\u0C1C\u0C40 \u0C35\u0C30\u0C4D\u0C17\u0C40\u0C38\u0D4D" }
+  { ml: "കെ. വി. സുരേഷ് കുമാർ (സെക്രട്ടറി)", en: "K. V. Suresh Kumar (Secretary)", hi: "के. वी. सुरेश कुमार (सचिव)", te: "కె. వి. సురేష్ కుమార్ (సెక్రటరీ)" },
+  { ml: "ശ്രീമതി അനിത സി. വി. (പ്രസിഡന്റ്)", en: "Smt. Anitha C. V. (President)", hi: "श्रीमती अनीता सी. वी. (अध्यक्ष)", te: "శ్రీమతి అనిత సి. వి. (అధ్యక్షురాలు)" },
+  { ml: "എം. രാജേഷ് (ഹെൽത്ത് ഇൻസ്‌പെക്ടർ)", en: "M. Rajesh (Health Inspector)", hi: "एम. राजेश (स्वास्थ्य निरीक्षक)", te: "యం. రాజేష్ (హెల్త్ ఇన్ స్పెక్టర్)" },
+  { ml: "കെ. പി. ഫാത്തിമ (കൃഷി ഓഫീസർ)", en: "K. P. Fathima (Agricultural Officer)", hi: "के. पी. फातिमा (कृषि अधिकारी)", te: "కె. పి. ఫాతిమా (వ్యవసాయ అధికారి)" },
+  { ml: "ആർ. ജയദേവൻ (അസിസ്റ്റന്റ് എഞ്ചിനീയർ)", en: "R. Jayadevan (Assistant Engineer)", hi: "आर. जयदेवन (सहायक अभियंता)", te: "ఆర్. జയదేవన్ (అసిస్టెంట్ ఇంజనీర్)" },
+  { ml: "ബി. പ്രകാശ് (സെക്ഷൻ ഓഫീസർ)", en: "B. Prakash (Section Officer)", hi: "बी. प्रकाश (अनुभाग अधिकारी)", te: "బి. ప్రకాష్ (సెక్షన్ ఆఫీసర్)" }
 ];
 
-const CATEGORY_KEYS = [
-  "health",
-  "water",
-  "agriculture",
-  "education",
-  "government"
-];
+const CATEGORY_KEYS = ["health", "water", "panchayat", "electricity", "agriculture", "education"];
 
 function generateRemainingServices() {
   const result = [...BASE_SERVICES];
-  for (let i = 11; i < 10500; i++) {
-    const catIndex = i * 7 % CATEGORY_KEYS.length;
-    const catKey = CATEGORY_KEYS[catIndex];
-    const isMainlyTargeted = i % 100 < 75;
-    let district = KERALA_DISTRICTS[i % KERALA_DISTRICTS.length];
-    let localityNameEn = "";
-    let localityNameMl = "";
-    let localityNameHi = "";
-    let localityNameTe = "";
-    if (isMainlyTargeted) {
-      district = KERALA_DISTRICTS.find((d) => d.en === "Kozhikode") || district;
-      const azhLoc = AZHIYUR_SUB_LOCALITIES[i % AZHIYUR_SUB_LOCALITIES.length];
-      localityNameEn = azhLoc.en;
-      localityNameMl = azhLoc.ml;
-      localityNameHi = azhLoc.hi;
-      localityNameTe = azhLoc.te;
-    } else {
-      const distIndex = i % KERALA_DISTRICTS.length;
-      district = KERALA_DISTRICTS[distIndex];
-      const localitiesEn = LOCALITIES_EN[district.en];
-      const localitiesMl = LOCALITIES_ML[district.en];
-      const localitiesHi = LOCALITIES_HI[district.en];
-      const localitiesTe = LOCALITIES_TE[district.en];
-      const locInDistIndex = i * 3 % localitiesEn.length;
-      localityNameEn = localitiesEn[locInDistIndex];
-      localityNameMl = localitiesMl[locInDistIndex];
-      localityNameHi = localitiesHi[locInDistIndex];
-      localityNameTe = localitiesTe[locInDistIndex];
-    }
-    const contactObj = REPRESENTATIVE_NAMES[i * 9 % REPRESENTATIVE_NAMES.length];
-    const phoneDigitA = i * 13 % 10;
-    const phoneDigitRest = i * 1973 % 9e4 + 1e4;
-    const phoneNumber = `+91 9447${phoneDigitA} ${phoneDigitRest}`;
-    const logDay = 11 - i % 7;
-    const lastVerified = `2026-06-${logDay.toString().padStart(2, "0")}`;
-    const isEmergency = catKey === "health" && i % 3 === 0;
-    let generated;
-    if (catKey === "health") {
-      const isHosp = i % 2 === 0;
-      generated = {
-        title: {
-          ml: isHosp ? `${localityNameMl} \u0D17\u0D35. \u0D24\u0D3E\u0D32\u0D42\u0D15\u0D4D\u0D15\u0D4D \u0D06\u0D36\u0D41\u0D2A\u0D24\u0D4D\u0D30\u0D3F` : `${localityNameMl} \u0D15\u0D41\u0D1F\u0D41\u0D02\u0D2C\u0D3E\u0D30\u0D4B\u0D17\u0D4D\u0D2F \u0D15\u0D47\u0D28\u0D4D\u0D26\u0D4D\u0D30\u0D02 (FHC)`,
-          en: isHosp ? `${localityNameEn} Govt. Taluk Hospital` : `${localityNameEn} Family Health Centre (FHC)`,
-          hi: isHosp ? `${localityNameHi} \u0938\u0930\u0915\u093E\u0930\u0940 \u0924\u093E\u0932\u0941\u0915 \u0905\u0938\u094D\u092A\u0924\u093E\u0932` : `${localityNameHi} \u092A\u093E\u0930\u093F\u0935\u093E\u0930\u093F\u0915 \u0938\u094D\u0935\u093E\u0938\u094D\u0925\u094D\u092F \u0915\u0947\u0902\u0926\u094D\u0930`,
-          te: isHosp ? `${localityNameTe} \u0C2A\u0C4D\u0C30\u0C2D\u0C41\u0C24\u0C4D\u0C35 \u0C24\u0C3E\u0C32\u0C42\u0C15\u0C3E \u0C06\u0C38\u0C41\u0C2A\u0C24\u0C4D\u0C30\u0C3F` : `${localityNameTe} \u0C15\u0C41\u0C1F\u0C41\u0C02\u0C2C \u0C06\u0C30\u0C4B\u0C17\u0C4D\u0C2F \u0C15\u0C47\u0C02\u0C26\u0C4D\u0C30\u0C02`
-        },
-        description: {
-          ml: `\u0D38\u0D2E\u0D17\u0D4D\u0D30\u0D2E\u0D3E\u0D2F \u0D2A\u0D4D\u0D30\u0D3E\u0D26\u0D47\u0D36\u0D3F\u0D15 \u0D06\u0D30\u0D4B\u0D17\u0D4D\u0D2F \u0D38\u0D02\u0D30\u0D15\u0D4D\u0D37\u0D23\u0D02, \u0D12.\u0D2A\u0D3F \u0D24\u0D3E\u0D32\u0D42\u0D15\u0D4D\u0D15\u0D4D \u0D38\u0D47\u0D35\u0D28\u0D19\u0D4D\u0D19\u0D7E, \u0D38\u0D57\u0D1C\u0D28\u0D4D\u0D2F \u0D2E\u0D30\u0D41\u0D28\u0D4D\u0D28\u0D41\u0D15\u0D7E \u0D32\u0D2D\u0D4D\u0D2F\u0D2E\u0D3E\u0D15\u0D4D\u0D15\u0D7D, \u0D28\u0D35\u0D1C\u0D3E\u0D24 \u0D36\u0D3F\u0D36\u0D41 \u0D2A\u0D30\u0D3F\u0D1A\u0D30\u0D23\u0D02.`,
-          en: `Comprehensive primary and outpatient emergency medical support, essential free medicine warehouse, and pediatric wellness care.`,
-          hi: `\u0935\u094D\u092F\u093E\u092A\u0915 \u092A\u094D\u0930\u093E\u0925\u092E\u093F\u0915 \u0914\u0930 \u0909\u092A-\u0915\u0947\u0902\u0926\u094D\u0930 \u092C\u093E\u0939\u094D\u092F \u0930\u094B\u0917\u0940 \u091A\u093F\u0915\u093F\u0924\u094D\u0938\u093E \u0938\u0939\u093E\u092F\u0924\u093E, \u0906\u092A\u093E\u0924\u0915\u093E\u0932\u0940\u0928 \u0913\u092A\u0940\u0921\u0940 \u0938\u0947\u0935\u093E \u0914\u0930 \u0906\u0935\u0936\u094D\u092F\u0915 \u092C\u093E\u0932 \u091F\u0940\u0915\u093E\u0915\u0930\u0923 \u0915\u093E\u0930\u094D\u092F\u0915\u094D\u0930\u092E\u0964`,
-          te: `\u0C38\u0C2E\u0C17\u0C4D\u0C30 \u0C2A\u0C4D\u0C30\u0C3E\u0C25\u0C2E\u0C3F\u0C15 \u0C2E\u0C30\u0C3F\u0C2F\u0C41 \u0C05\u0C24\u0C4D\u0C2F\u0C35\u0C38\u0C30 \u0C35\u0C48\u0C26\u0C4D\u0C2F \u0C38\u0C47\u0C35\u0C32\u0C41, \u0C09\u0C1A\u0C3F\u0C24 \u0C2E\u0C02\u0C26\u0C41\u0C32 \u0C2A\u0C02\u0C2A\u0C3F\u0C23\u0C40 \u0C2E\u0C30\u0C3F\u0C2F\u0C41 \u0C36\u0C3F\u0C36\u0C41 \u0C06\u0C30\u0C4B\u0C17\u0C4D\u0C2F \u0C30\u0C15\u0C4D\u0C37\u0C23 \u0C35\u0C3F\u0C2D\u0C3E\u0C17\u0C02.`
-        },
-        category: {
-          ml: "\u0D15\u0D41\u0D1F\u0D41\u0D02\u0D2C\u0D3E\u0D30\u0D4B\u0D17\u0D4D\u0D2F \u0D15\u0D47\u0D28\u0D4D\u0D26\u0D4D\u0D30\u0D02",
-          en: "Family Health Centre",
-          hi: "\u0938\u094D\u0935\u093E\u0938\u094D\u0925\u094D\u092F \u0915\u0947\u0902\u0926\u094D\u0930",
-          te: "\u0C15\u0C41\u0C1F\u0C41\u0C02\u0C2C \u0C06\u0C30\u0C4B\u0C17\u0C4D\u0C2F \u0C15\u0C47\u0C02\u0C26\u0C4D\u0C30\u0C02"
-        },
-        hours: {
-          ml: isEmergency ? "24 \u0D2E\u0D23\u0D3F\u0D15\u0D4D\u0D15\u0D42\u0D31\u0D41\u0D02 \u0D2A\u0D4D\u0D30\u0D35\u0D7C\u0D24\u0D4D\u0D24\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41 (\u0D05\u0D24\u0D4D\u0D2F\u0D3E\u0D39\u0D3F\u0D24 \u0D35\u0D3F\u0D2D\u0D3E\u0D17\u0D02)" : "\u0D30\u0D3E\u0D35\u0D3F\u0D32\u0D46 8:30 - \u0D09\u0D1A\u0D4D\u0D1A\u0D2F\u0D4D\u0D15\u0D4D\u0D15\u0D4D 2:00 | \u0D05\u0D24\u0D4D\u0D2F\u0D3E\u0D39\u0D3F\u0D24\u0D02 24 \u0D2E\u0D23\u0D3F\u0D15\u0D4D\u0D15\u0D42\u0D7C",
-          en: isEmergency ? "24/7 Emergency Casualty Desk" : "OPD: 8:30 AM - 2:00 PM | Emergency Available",
-          hi: isEmergency ? "24/7 \u0906\u092A\u093E\u0924\u0915\u093E\u0932\u0940\u0928 \u0938\u0947\u0935\u093E" : "\u0913\u092A\u0940\u0921\u0940: \u0938\u0941\u092C\u0939 8:30 - \u0926\u094B\u092A\u0939\u0930 2:00 | \u0906\u092A\u093E\u0924\u0915\u093E\u0932\u0940\u0928 \u0909\u092A\u0932\u092C\u094D\u0927",
-          te: isEmergency ? "24/7 \u0C05\u0C24\u0C4D\u0C2F\u0C35\u0C38\u0C30 \u0C21\u0C46\u0C38\u0C4D\u0C15\u0C4D" : "\u0C13\u0C2A\u0C3F\u0C21\u0C3F: \u0C09\u0C26\u0C2F\u0C02 8:30 - \u0C2E\u0C27\u0C4D\u0C2F\u0C3E\u0C39\u0C4D\u0C28\u0C02 2:00 | \u0C05\u0C24\u0C4D\u0C2F\u0C35\u0C38\u0C30 \u0C05\u0C02\u0C26\u0C41\u0C2C\u0C3E\u0C1F\u0C41"
+  let idCounter = 100;
+
+  KERALA_DISTRICTS_LIST.forEach((dist) => {
+    const panchayats = KERALA_PANCHAYATS_BY_DISTRICT[dist.en] || [];
+    panchayats.forEach((pnc, pncIdx) => {
+      const pncEn = pnc.en;
+      const pncMl = pnc.ml;
+
+      CATEGORY_KEYS.forEach((catKey, catIdx) => {
+        idCounter++;
+        const contactObj = REPRESENTATIVE_NAMES[(pncIdx + catIdx) % REPRESENTATIVE_NAMES.length];
+        const phoneDigitA = (pncIdx * 7 + catIdx * 3) % 10;
+        const phoneDigitRest = Math.floor((pncIdx * 1973 + catIdx * 883) % 90000 + 10000);
+        const phoneNumber = `+91 9447${phoneDigitA} ${phoneDigitRest}`;
+        const logDay = 1 + ((pncIdx + catIdx) % 28);
+        const lastVerified = `2026-06-${logDay.toString().padStart(2, "0")}`;
+        const isEmergency = catKey === "health";
+
+        let generated;
+        if (catKey === "health") {
+          generated = {
+            title: {
+              ml: `${pncMl} ഗവ. കുടുംബാരോഗ്യ കേന്ദ്രം (FHC)`,
+              en: `${pncEn} Family Health Centre (FHC)`,
+              hi: `${pncEn} पारिवारिक स्वास्थ्य केंद्र (FHC)`,
+              te: `${pncEn} కుటుంబ ఆరోగ్య కేంద్రం (FHC)`
+            },
+            description: {
+              ml: `${pncMl} പഞ്ചായത്തിലെ പ്രാഥമിക ആരോഗ്യ രക്ഷാ കേന്ദ്രം, അത്യാഹിത വിഭാഗം, സൗജന്യ മരുന്ന് വിതരണം.`,
+              en: `Primary family health center serving ${pncEn} Panchayat. 24/7 OP care, free essential medicines & diagnostics.`,
+              hi: `${pncEn} पंचायत के लिए प्राथमिक स्वास्थ्य केंद्र।`,
+              te: `${pncEn} పంచాయతీ కోసం ప్రాథమిక ఆరోగ్య కేంద్రం.`
+            },
+            category: {
+              ml: "ആരോഗ്യം",
+              en: "Health",
+              hi: "स्वास्थ्य",
+              te: "ആരോഗ്യം"
+            },
+            hours: {
+              ml: "രാവിലെ 8:30 - ഉച്ചയ്ക്ക് 2:30",
+              en: "8:30 AM - 2:30 PM",
+              hi: "सुबह 8:30 - दोपहर 2:30",
+              te: "ఉదయం 8:30 - మధ్యాహ్నం 2:30"
+            }
+          };
+        } else if (catKey === "water") {
+          const isKWA = pncIdx % 2 === 0;
+          generated = {
+            title: {
+              ml: isKWA ? `കേരള വാട്ടർ അതോറിറ്റി (KWA) സെക്ഷൻ - ${pncMl}` : `ജലനിധി കുടിവെള്ള വിതരണ ഉപകേന്ദ്രം - ${pncMl}`,
+              en: isKWA ? `Kerala Water Authority (KWA) - ${pncEn}` : `Jalanidhi Water Supply Substation - ${pncEn}`,
+              hi: isKWA ? `केरल जल प्राधिकरण - ${pncEn}` : `जलनिधि पेयजल केंद्र - ${pncEn}`,
+              te: isKWA ? `కేరళ నీటి సరఫరా - ${pncEn}` : `జలనిధి మంచినీటి కేంద్రం - ${pncEn}`
+            },
+            description: {
+              ml: `${pncMl} പഞ്ചായത്തിലെ പൊതു കുടിവെള്ള വിതരണവും പുതിയ പൈപ്പ് കണക്ഷനുകളും.`,
+              en: `Public drinking water supply distribution & new pipe connection services for ${pncEn}.`,
+              hi: `${pncEn} के लिए सार्वजनिक पेयजल आपूर्ति।`,
+              te: `${pncEn} కోసం తాగునీటి సరఫరా.`
+            },
+            category: {
+              ml: "കുടിവെള്ളം",
+              en: "Water",
+              hi: "जल",
+              te: "నీరు"
+            },
+            hours: {
+              ml: "രാവിലെ 9:00 - വൈകുന്നേരം 4:00",
+              en: "9:00 AM - 4:00 PM",
+              hi: "सुबह 9:00 - शाम 4:00",
+              te: "ఉదയം 9:00 - സായന്ത്രം 4:00"
+            }
+          };
+        } else if (catKey === "panchayat") {
+          generated = {
+            title: {
+              ml: `${pncMl} ഗ്രാമപഞ്ചായത്ത് കാര്യാലയം`,
+              en: `${pncEn} Grama Panchayat Office`,
+              hi: `${pncEn} ग्राम पंचायत कार्यालय`,
+              te: `${pncEn} గ్రామ పంచాయతీ కార్యాలయం`
+            },
+            description: {
+              ml: `${pncMl} പഞ്ചായത്തിലെ സർട്ടിഫിക്കറ്റുകൾ, നികുതി പിരിവ്, കെട്ടിട അനുമതികൾ, വികസന പദ്ധതികൾ.`,
+              en: `Civil registrations, certificates, licenses, property tax & local development schemes in ${pncEn}.`,
+              hi: `${pncEn} ग्राम पंचायत कार्यालय नागरिक सेवाएं।`,
+              te: `${pncEn} గ్రామ పంచాయతీ పౌര సేవలు.`
+            },
+            category: {
+              ml: "തദ്ദേശസ്വയംഭരണം",
+              en: "Government",
+              hi: "तद्देशीय शासन",
+              te: "പ്രభుത്വം"
+            },
+            hours: {
+              ml: "രാവിലെ 10:00 - വൈകുന്നേരം 5:00",
+              en: "10:00 AM - 5:00 PM",
+              hi: "सुबह 10:00 - शाम 5:00",
+              te: "ഉദയം 10:00 - സായന്ത്രം 5:00"
+            }
+          };
+        } else if (catKey === "electricity") {
+          generated = {
+            title: {
+              ml: `കെ.എസ്.ഇ.ബി (KSEB) സെക്ഷൻ ഓഫീസ് - ${pncMl}`,
+              en: `KSEB Electrical Section Office - ${pncEn}`,
+              hi: `केएसईबी विद्युत अनुभाग - ${pncEn}`,
+              te: `KSEB విద్యుత్ సెక్షన్ - ${pncEn}`
+            },
+            description: {
+              ml: `${pncMl} പ്രദേശത്തെ വൈദ്യുതി വിതരണം, പുതിയ കണക്ഷനുകൾ, പരാതി പരിഹാര കേന്ദ്രം.`,
+              en: `Power distribution maintenance, new connection applications, and power failure complaint desk for ${pncEn}.`,
+              hi: `${pncEn} के लिए बिजली आपूर्ति और शिकायत निवारण।`,
+              te: `${pncEn} కోసం విద్యുత్ సరഫరా మరియు ఫిర్యాదుల కేంద్రം.`
+            },
+            category: {
+              ml: "വൈദ്യുതി / സേവനങ്ങൾ",
+              en: "Utilities",
+              hi: "उपयोगिताएँ",
+              te: "ഉപയോగాలు"
+            },
+            hours: {
+              ml: "രാവിലെ 9:00 - വൈകുന്നേരം 5:00 | 24x7 ഫ്യൂസ് ഓഫ്",
+              en: "9:00 AM - 5:00 PM | 24x7 Fuse Call Desk",
+              hi: "सुबह 9:00 - शाम 5:00",
+              te: "ഉദയം 9:00 - സായന്ത്രം 5:00"
+            }
+          };
+        } else if (catKey === "agriculture") {
+          generated = {
+            title: {
+              ml: `${pncMl} കൃഷിഭവൻ`,
+              en: `${pncEn} Krishi Bhavan`,
+              hi: `${pncEn} कृषि भवन`,
+              te: `${pncEn} కృషి భవన్`
+            },
+            description: {
+              ml: `${pncMl} പഞ്ചായത്തിലെ കർഷകർക്കുള്ള സബ്‌സിഡി, വിത്ത് വിതരണം, വിള ഇൻഷുറൻസ്, സാങ്കേതിക ഉപദേശം.`,
+              en: `Agricultural guidance, seed distribution, crop insurance, and farmer subsidies for ${pncEn}.`,
+              hi: `${pncEn} में किसानों के लिए सरकारी कृषि सलाह एवं सब्सिडी।`,
+              te: `${pncEn} లో రైతులకు ప్రభుత్వం అందించే సేవలు.`
+            },
+            category: {
+              ml: "കൃഷി",
+              en: "Agriculture",
+              hi: "कृषि",
+              te: "വ്യവసాయം"
+            },
+            hours: {
+              ml: "രാവിലെ 10:00 - വൈകുന്നേരം 5:00",
+              en: "10:00 AM - 5:00 PM",
+              hi: "सुबह 10:00 - शाम 5:00",
+              te: "ഉദയം 10:00 - സായന്ത്രം 5:00"
+            }
+          };
+        } else {
+          generated = {
+            title: {
+              ml: `${pncMl} ഗവ. ഹയർ സെക്കൻഡറി സ്‌കൂൾ / ഓഫീസ്`,
+              en: `${pncEn} Govt. Higher Secondary School & Edu Desk`,
+              hi: `${pncEn} शासकीय उच्चतर माध्यमिक विद्यालय`,
+              te: `${pncEn} ప్రభుత్వ ఉన్నత పాఠశాల`
+            },
+            description: {
+              ml: `${pncMl} പഞ്ചായത്തിലെ പൊതുവിദ്യാഭ്യാസ സ്ഥാപനം, വിദ്യാർത്ഥി ആനുകൂല്യങ്ങൾ, ഉച്ചഭക്ഷണ പദ്ധതി.`,
+              en: `Public education facility in ${pncEn}, student scholarship guidance & Midday Meal scheme administrative desk.`,
+              hi: `${pncEn} में सार्वजनिक शिक्षा सुविधा एवं छात्रवृत्ति मार्गदर्शन।`,
+              te: `${pncEn} లో ప్రభుత్వ విద్యా సేవలు.`
+            },
+            category: {
+              ml: "വിദ്യാഭ്യാസം",
+              en: "Education",
+              hi: "शिक्षा",
+              te: "విద్య"
+            },
+            hours: {
+              ml: "രാവിലെ 9:30 - വൈകുന്നേരം 4:30",
+              en: "9:30 AM - 4:30 PM",
+              hi: "सुबह 9:30 - शाम 4:30",
+              te: "ഉദയം 9:30 - സായന്ത്രം 4:30"
+            }
+          };
         }
-      };
-    } else if (catKey === "water") {
-      const isKWA = i % 2 === 0;
-      generated = {
-        title: {
-          ml: isKWA ? `\u0D15\u0D47\u0D30\u0D33 \u0D35\u0D3E\u0D1F\u0D4D\u0D1F\u0D7C \u0D05\u0D24\u0D4B\u0D31\u0D3F\u0D31\u0D4D\u0D31\u0D3F (KWA) \u0D38\u0D46\u0D15\u0D4D\u0D37\u0D7B - ${localityNameMl}` : `\u0D1C\u0D32\u0D28\u0D3F\u0D27\u0D3F \u0D15\u0D41\u0D1F\u0D3F\u0D35\u0D46\u0D33\u0D4D\u0D33 \u0D35\u0D3F\u0D24\u0D30\u0D23 \u0D09\u0D2A\u0D15\u0D47\u0D28\u0D4D\u0D26\u0D4D\u0D30\u0D02 - ${localityNameMl}`,
-          en: isKWA ? `Kerala Water Authority (KWA) Section - ${localityNameEn}` : `Jalanidhi Water Supply Substation - ${localityNameEn}`,
-          hi: isKWA ? `\u0915\u0947\u0930\u0932 \u091C\u0932 \u092A\u094D\u0930\u093E\u0927\u093F\u0915\u0930\u0923 \u0905\u0928\u0941\u092D\u093E\u0917 - ${localityNameHi}` : `\u091C\u0932\u0928\u093F\u0927\u093F \u092A\u0947\u092F\u091C\u0932 \u0909\u092A\u0915\u0947\u0902\u0926\u094D\u0930 - ${localityNameHi}`,
-          te: isKWA ? `\u0C15\u0C47\u0C30\u0C33 \u0C28\u0C40\u0C1F\u0C3F \u0C38\u0C30\u0C2B\u0C30\u0C3E \u0C35\u0C3F\u0C2D\u0C3E\u0C17\u0C02 - ${localityNameTe}` : `\u0C1C\u0C32\u0C28\u0C3F\u0C27\u0C3F \u0C2E\u0C02\u0C1A\u0C3F\u0C28\u0C40\u0C1F\u0C3F \u0C38\u0C2C\u0C4D-\u0C38\u0C4D\u0C1F\u0C47\u0C37\u0C28\u0C4D - ${localityNameTe}`
-        },
-        description: {
-          ml: `\u0D2A\u0D4D\u0D30\u0D3E\u0D26\u0D47\u0D36\u0D3F\u0D15 \u0D1C\u0D32\u0D36\u0D41\u0D26\u0D4D\u0D27\u0D40\u0D15\u0D30\u0D23 \u0D36\u0D43\u0D02\u0D16\u0D32. \u0D09\u0D2F\u0D7C\u0D28\u0D4D\u0D28 \u0D28\u0D3F\u0D32\u0D35\u0D3E\u0D30\u0D24\u0D4D\u0D24\u0D3F\u0D32\u0D41\u0D33\u0D4D\u0D33 \u0D31\u0D3F\u0D35\u0D47\u0D34\u0D4D\u0D38\u0D4D \u0D13\u0D38\u0D4D\u0D2E\u0D4B\u0D38\u0D3F\u0D38\u0D4D \u0D1F\u0D3E\u0D19\u0D4D\u0D15\u0D41\u0D15\u0D33\u0D41\u0D02 \u0D36\u0D41\u0D26\u0D4D\u0D27\u0D1C\u0D32 \u0D35\u0D3F\u0D24\u0D30\u0D23 \u0D2A\u0D4D\u0D32\u0D3E\u0D28\u0D4D\u0D31\u0D41\u0D02.`,
-          en: `Local filtered drinking water substation using high-tech reverse osmosis systems and reservoir tank management.`,
-          hi: `\u0909\u091A\u094D\u091A \u0938\u094D\u0924\u0930\u0940\u092F \u092A\u0947\u092F\u091C\u0932 \u095E\u093F\u0932\u094D\u091F\u0930 \u0914\u0930 \u0906\u0930\u0913 \u0909\u092A\u091A\u093E\u0930 \u0938\u0902\u092F\u0902\u0924\u094D\u0930\u0964 \u092A\u093E\u0928\u0940 \u0915\u0940 \u0917\u0941\u0923\u0935\u0924\u094D\u0924\u093E \u0914\u0930 \u0906\u092A\u0942\u0930\u094D\u0924\u093F \u0915\u093E \u0938\u094D\u0925\u093E\u0928\u0940\u092F \u092A\u094D\u0930\u092C\u0902\u0927\u0928\u0964`,
-          te: `\u0C38\u0C4D\u0C25\u0C3E\u0C28\u0C3F\u0C15 \u0C38\u0C41\u0C30\u0C15\u0C4D\u0C37\u0C3F\u0C24 \u0C2E\u0C02\u0C1A\u0C3F\u0C28\u0C40\u0C1F\u0C3F \u0C2B\u0C3F\u0C32\u0C4D\u0C1F\u0C30\u0C47\u0C37\u0C28\u0C4D \u0C2A\u0C4D\u0C32\u0C3E\u0C02\u0C1F\u0C4D. \u0C30\u0C3F\u0C35\u0C30\u0C4D\u0C38\u0C4D \u0C06\u0C38\u0C4D\u0C2E\u0C4B\u0C38\u0C3F\u0C38\u0C4D \u0C2A\u0C26\u0C4D\u0C27\u0C24\u0C3F \u0C26\u0C4D\u0C35\u0C3E\u0C30\u0C3E \u0C2E\u0C02\u0C1A\u0C3F\u0C28\u0C40\u0C1F\u0C3F \u0C2A\u0C02\u0C2A\u0C3F\u0C23\u0C40 \u0C35\u0C4D\u0C2F\u0C35\u0C38\u0C4D\u0C25.`
-        },
-        category: {
-          ml: "\u0D15\u0D41\u0D1F\u0D3F\u0D35\u0D46\u0D33\u0D4D\u0D33 \u0D2A\u0D26\u0D4D\u0D27\u0D24\u0D3F",
-          en: "Water Supply Project",
-          hi: "\u092A\u0947\u092F\u091C\u0932 \u092A\u0930\u093F\u092F\u094B\u091C\u0928\u093E",
-          te: "\u0C24\u0C4D\u0C30\u0C3E\u0C17\u0C41\u0C28\u0C40\u0C1F\u0C3F \u0C2A\u0C25\u0C15\u0C02"
-        },
-        hours: {
-          ml: "\u0D30\u0D3E\u0D35\u0D3F\u0D32\u0D46 6:00 - 10:00 | \u0D35\u0D48\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D47\u0D30\u0D02 4:30 - \u0D30\u0D3E\u0D24\u0D4D\u0D30\u0D3F 8:00",
-          en: "6:00 AM - 10:00 AM | 4:30 PM - 8:00 PM",
-          hi: "\u0938\u0941\u092C\u0939 6:00 - 10:00 | \u0936\u093E\u092E 4:30 - \u0930\u093E\u0924 8:00",
-          te: "\u0C09\u0C26\u0C2F\u0C02 6:00 - 10:00 | \u0C38\u0C3E\u0C2F\u0C02\u0C24\u0C4D\u0C30\u0C02 4:30 - \u0C30\u0C3E\u0C24\u0C4D\u0C30\u0C3F 8:00"
-        }
-      };
-    } else if (catKey === "agriculture") {
-      generated = {
-        title: {
-          ml: `${localityNameMl} \u0D17\u0D35\u0D7A\u0D2E\u0D46\u0D28\u0D4D\u0D31\u0D4D \u0D15\u0D43\u0D37\u0D3F\u0D2D\u0D35\u0D7B`,
-          en: `${localityNameEn} Government Krishi Bhavan`,
-          hi: `${localityNameHi} \u0938\u0930\u0915\u093E\u0930\u0940 \u0915\u0943\u0937\u093F \u092D\u0935\u0928`,
-          te: `${localityNameTe} \u0C2A\u0C4D\u0C30\u0C2D\u0C41\u0C24\u0C4D\u0C35 \u0C15\u0C43\u0C37\u0C3F \u0C2D\u0C35\u0C28\u0C4D`
-        },
-        description: {
-          ml: `\u0D15\u0D7C\u0D37\u0D15\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D33\u0D4D\u0D33 \u0D17\u0D41\u0D23\u0D28\u0D3F\u0D32\u0D35\u0D3E\u0D30\u0D2E\u0D41\u0D33\u0D4D\u0D33 \u0D38\u0D2C\u0D4D\u200C\u0D38\u0D3F\u0D21\u0D3F \u0D35\u0D3F\u0D24\u0D4D\u0D24\u0D41\u0D15\u0D7E, \u0D1C\u0D48\u0D35\u0D35\u0D33\u0D02, \u0D2A\u0D3F.\u0D0E\u0D1A\u0D4D\u0D1A\u0D4D \u0D2E\u0D23\u0D4D\u0D23\u0D41\u0D2A\u0D30\u0D3F\u0D36\u0D4B\u0D27\u0D28 \u0D38\u0D4C\u0D15\u0D30\u0D4D\u0D2F\u0D02 \u0D12\u0D2A\u0D4D\u0D2A\u0D02 \u0D15\u0D3E\u0D7C\u0D37\u0D3F\u0D15 \u0D38\u0D3E\u0D2E\u0D17\u0D4D\u0D30\u0D3F\u0D15\u0D7E.`,
-          en: `State agriculture hub providing subsidized high-yield seeds, eco-fertilizers, soil PH analysis, and farm equipment rental.`,
-          hi: `\u0915\u093F\u0938\u093E\u0928\u094B\u0902 \u0915\u094B \u0930\u093F\u092F\u093E\u092F\u0924\u0940 \u0926\u0930 \u092A\u0930 \u091F\u093F\u0915\u093E\u090A \u091C\u0948\u0935\u093F\u0915 \u092C\u0940\u091C, \u091C\u0948\u0935\u093F\u0915 \u0916\u093E\u0926 \u0914\u0930 \u0909\u0928\u094D\u0928\u0924 \u0915\u0943\u0937\u093F \u092D\u0942\u092E\u093F \u092A\u0930\u0940\u0915\u094D\u0937\u0923 \u0938\u0947\u0935\u093E\u090F\u0902 \u0926\u0947\u0928\u0947 \u0935\u093E\u0932\u093E \u0938\u0902\u0938\u094D\u0925\u093E\u0928\u0964`,
-          te: `\u0C30\u0C48\u0C24\u0C41 \u0C38\u0C47\u0C35\u0C3E \u0C15\u0C47\u0C02\u0C26\u0C4D\u0C30\u0C02. \u0C07\u0C15\u0C4D\u0C15\u0C21 \u0C38\u0C2C\u0C4D\u0C38\u0C3F\u0C21\u0C40 \u0C35\u0C3F\u0C24\u0C4D\u0C24\u0C28\u0C3E\u0C32\u0C41, \u0C38\u0C47\u0C02\u0C26\u0C4D\u0C30\u0C40\u0C2F \u0C0E\u0C30\u0C41\u0C35\u0C41\u0C32\u0C41 \u0C2E\u0C30\u0C3F\u0C2F\u0C41 \u0C2E\u0C1F\u0C4D\u0C1F\u0C3F \u0C2A\u0C30\u0C40\u0C15\u0C4D\u0C37 \u0C38\u0C4C\u0C15\u0C30\u0C4D\u0C2F\u0C3E\u0C32\u0C41 \u0C32\u0C2D\u0C3F\u0C38\u0C4D\u0C24\u0C3E\u0C2F\u0C3F.`
-        },
-        category: {
-          ml: "\u0D15\u0D43\u0D37\u0D3F\u0D2D\u0D35\u0D7B",
-          en: "Krishi Bhavan",
-          hi: "\u0915\u0943\u0937\u093F \u092D\u0935\u0928",
-          te: "\u0C15\u0C43\u0C37\u0C3F \u0C2D\u0C35\u0C28\u0C4D (\u0C35\u0C4D\u0C2F\u0C35\u0C38\u0C3E\u0C2F\u0C02)"
-        },
-        hours: {
-          ml: "\u0D30\u0D3E\u0D35\u0D3F\u0D32\u0D46 10:00 - \u0D35\u0D48\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D47\u0D30\u0D02 4:00 (\u0D1E\u0D3E\u0D2F\u0D31\u0D3E\u0D34\u0D4D\u0D1A \u0D12\u0D34\u0D3F\u0D15\u0D46)",
-          en: "10:00 AM - 4:00 PM (Closed Sundays)",
-          hi: "\u0938\u0941\u092C\u0939 10:00 - \u0936\u093E\u092E 4:00 (\u0930\u0935\u093F\u0935\u093E\u0930 \u0905\u0935\u0915\u093E\u0936)",
-          te: "\u0C09\u0C26\u0C2F\u0C02 10:00 - \u0C38\u0C3E\u0C2F\u0C02\u0C24\u0C4D\u0C30\u0C02 4:00 (\u0C06\u0C26\u0C3F\u0C35\u0C3E\u0C30\u0C02 \u0C38\u0C46\u0C32\u0C35\u0C41)"
-        }
-      };
-    } else if (catKey === "education") {
-      const isHS = i % 2 === 0;
-      generated = {
-        title: {
-          ml: isHS ? `\u0D17\u0D35\u0D7A\u0D2E\u0D46\u0D28\u0D4D\u0D31\u0D4D \u0D39\u0D2F\u0D7C \u0D38\u0D46\u0D15\u0D4D\u0D15\u0D7B\u0D21\u0D31\u0D3F \u0D38\u0D4D\u0D15\u0D42\u0D7E (GHSS) - ${localityNameMl}` : `\u0D15\u0D4B\u0D7A\u0D35\u0D46\u0D28\u0D4D\u0D31\u0D4D \u0D0E\u0D7D.\u0D2A\u0D3F. \u0D38\u0D4D\u0D15\u0D42\u0D7E - ${localityNameMl}`,
-          en: isHS ? `Government Higher Secondary School (GHSS) - ${localityNameEn}` : `Convent Lower Primary School - ${localityNameEn}`,
-          hi: isHS ? `\u0938\u0930\u0915\u093E\u0930\u0940 \u0909\u091A\u094D\u091A\u0924\u0930 \u092E\u093E\u0927\u094D\u092F\u092E\u093F\u0915 \u0935\u093F\u0926\u094D\u092F\u093E\u0932\u092F - ${localityNameHi}` : `\u0915\u0949\u0928\u094D\u0935\u0947\u0902\u091F \u092A\u094D\u0930\u093E\u0925\u092E\u093F\u0915 \u0935\u093F\u0926\u094D\u092F\u093E\u0932\u092F - ${localityNameHi}`,
-          te: isHS ? `\u0C2A\u0C4D\u0C30\u0C2D\u0C41\u0C24\u0C4D\u0C35 \u0C09\u0C28\u0C4D\u0C28\u0C24 \u0C2A\u0C3E\u0C20\u0C36\u0C3E\u0C32 (GHSS) - ${localityNameTe}` : `\u0C15\u0C3E\u0C28\u0C4D\u0C35\u0C46\u0C02\u0C1F\u0C4D \u0C2A\u0C4D\u0C30\u0C3E\u0C25\u0C2E\u0C3F\u0C15 \u0C2A\u0C3E\u0C20\u0C36\u0C3E\u0C32 - ${localityNameTe}`
-        },
-        description: {
-          ml: `\u0D2E\u0D3F\u0D15\u0D1A\u0D4D\u0D1A \u0D38\u0D57\u0D1C\u0D28\u0D4D\u0D2F \u0D35\u0D3F\u0D26\u0D4D\u0D2F\u0D3E\u0D2D\u0D4D\u0D2F\u0D3E\u0D38\u0D02, \u0D39\u0D48\u0D1F\u0D46\u0D15\u0D4D \u0D15\u0D2E\u0D4D\u0D2A\u0D4D\u0D2F\u0D42\u0D1F\u0D4D\u0D1F\u0D7C \u0D15\u0D4D\u0D32\u0D3E\u0D38\u0D4D\u0D38\u0D41\u0D15\u0D7E, \u0D15\u0D41\u0D1F\u0D4D\u0D1F\u0D3F\u0D15\u0D7E\u0D15\u0D4D\u0D15\u0D3E\u0D2F\u0D3F \u0D15\u0D41\u0D1F\u0D41\u0D02\u0D2C\u0D36\u0D4D\u0D30\u0D40 \u0D12\u0D30\u0D41\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D38\u0D57\u0D1C\u0D28\u0D4D\u0D2F \u0D09\u0D1A\u0D4D\u0D1A\u0D2D\u0D15\u0D4D\u0D37\u0D23 \u0D2A\u0D26\u0D4D\u0D27\u0D24\u0D3F.`,
-          en: `Excellent open public education platform. Equipped with modern smart IT labs and nutritional daily Kudumbashree free meals.`,
-          hi: `\u0938\u0941\u0932\u092D \u0917\u0941\u0923\u0935\u0924\u094D\u0924\u093E\u092A\u0942\u0930\u094D\u0923 \u0936\u093F\u0915\u094D\u0937\u093E, \u0938\u0941\u0935\u094D\u092F\u0935\u0938\u094D\u0925\u093F\u0924 \u0915\u0902\u092A\u094D\u092F\u0942\u091F\u0930 \u0932\u0948\u092C \u0914\u0930 \u0938\u094D\u0925\u093E\u0928\u0940\u092F \u0938\u0939\u093E\u092F\u0924\u093E \u0938\u092E\u0942\u0939 \u0938\u0902\u091A\u093E\u0932\u093F\u0924 \u0917\u0930\u094D\u092E \u0926\u094B\u092A\u0939\u0930 \u092D\u094B\u091C\u0928 \u0935\u094D\u092F\u0935\u0938\u094D\u0925\u093E\u0964`,
-          te: `\u0C09\u0C1A\u0C3F\u0C24 \u0C38\u0C30\u0C4D\u0C15\u0C3E\u0C30\u0C41 \u0C2A\u0C3E\u0C20\u0C36\u0C3E\u0C32. \u0C07\u0C15\u0C4D\u0C15\u0C21 \u0C06\u0C27\u0C41\u0C28\u0C3F\u0C15 \u0C15\u0C02\u0C2A\u0C4D\u0C2F\u0C42\u0C1F\u0C30\u0C4D \u0C32\u0C4D\u0C2F\u0C3E\u0C2C\u0C4D\u200C\u0C32\u0C41 \u0C2E\u0C30\u0C3F\u0C2F\u0C41 \u0C30\u0C41\u0C1A\u0C3F\u0C15\u0C30\u0C2E\u0C48\u0C28 \u0C2E\u0C27\u0C4D\u0C2F\u0C3E\u0C39\u0C4D\u0C28 \u0C2D\u0C4B\u0C1C\u0C28 \u0C2A\u0C25\u0C15\u0C2E\u0C41 \u0C09\u0C28\u0C4D\u0C28\u0C3E\u0C2F\u0C3F.`
-        },
-        category: {
-          ml: "\u0D38\u0D4D\u0D15\u0D42\u0D33\u0D41\u0D15\u0D33\u0D41\u0D02 \u0D35\u0D3F\u0D26\u0D4D\u0D2F\u0D3E\u0D2D\u0D4D\u0D2F\u0D3E\u0D38\u0D35\u0D41\u0D02",
-          en: "Schools & Education",
-          hi: "\u0935\u093F\u0926\u094D\u092F\u093E\u0932\u092F \u0935 \u0936\u093F\u0915\u094D\u0937\u093E",
-          te: "\u0C2A\u0C3E\u0C20\u0C36\u0C3E\u0C32\u0C32\u0C41 & \u0C35\u0C3F\u0C26\u0C4D\u0C2F"
-        },
-        hours: {
-          ml: "\u0D30\u0D3E\u0D35\u0D3F\u0D32\u0D46 9:00 - \u0D35\u0D48\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D47\u0D30\u0D02 4:30 (\u0D24\u0D3F\u0D19\u0D4D\u0D15\u0D7E \u0D2E\u0D41\u0D24\u0D7D \u0D35\u0D46\u0D33\u0D4D\u0D33\u0D3F \u0D35\u0D30\u0D46)",
-          en: "9:00 AM - 4:30 PM (Monday to Friday)",
-          hi: "\u0938\u0941\u092C\u0939 9:00 - \u0936\u093E\u092E 4:30 (\u0938\u094B\u092E\u0935\u093E\u0930 \u0938\u0947 \u0936\u0941\u0915\u094D\u0930\u0935\u093E\u0930)",
-          te: "\u0C09\u0C26\u0C2F\u0C02 9:00 - \u0C38\u0C3E\u0C2F\u0C02\u0C24\u0C4D\u0C30\u0C02 4:30 (\u0C38\u0C4B\u0C2E\u0C35\u0C3E\u0C30\u0C02 \u0C28\u0C41\u0C02\u0C21\u0C3F \u0C36\u0C41\u0C15\u0C4D\u0C30\u0C35\u0C3E\u0C30\u0C02 \u0C35\u0C30\u0C15\u0C41)"
-        }
-      };
-    } else {
-      const isAkshaya = i % 2 === 0;
-      generated = {
-        title: {
-          ml: isAkshaya ? `\u0D05\u0D15\u0D4D\u0D37\u0D2F \u0D07-\u0D15\u0D47\u0D28\u0D4D\u0D26\u0D4D\u0D30\u0D19\u0D4D\u0D19\u0D7E - ${localityNameMl}` : `${localityNameMl} \u0D35\u0D3F\u0D32\u0D4D\u0D32\u0D47\u0D1C\u0D4D \u0D13\u0D2B\u0D40\u0D38\u0D4D`,
-          en: isAkshaya ? `Akshaya e-Centre - ${localityNameEn}` : `${localityNameEn} Village Office & Registry`,
-          hi: isAkshaya ? `\u0905\u0915\u094D\u0937\u092F \u0908-\u0915\u0947\u0902\u0926\u094D\u0930 - ${localityNameHi}` : `${localityNameHi} \u0917\u094D\u0930\u093E\u092E \u0915\u093E\u0930\u094D\u092F\u093E\u0932\u092F \u0914\u0930 \u0930\u091C\u093F\u0938\u094D\u091F\u094D\u0930\u0940`,
-          te: isAkshaya ? `\u0C05\u0D15\u0D4D\u0D37\u0C2F \u0C08-\u0C15\u0C47\u0C02\u0C26\u0C4D\u0C30\u0C02 - ${localityNameTe}` : `${localityNameTe} \u0C17\u0C4D\u0C30\u0C3E\u0C2E \u0C30\u0C46\u0C35\u0C46\u0C28\u0C4D\u0C2F\u0C42 \u0C15\u0C3E\u0C30\u0C4D\u0C2F\u0C3E\u0C32\u0C2F\u0C02`
-        },
-        description: {
-          ml: `\u0D1C\u0D28\u0D28 \u0D2E\u0D30\u0D23 \u0D38\u0D7C\u0D1F\u0D4D\u0D1F\u0D3F\u0D2B\u0D3F\u0D15\u0D4D\u0D15\u0D31\u0D4D\u0D31\u0D4D \u0D30\u0D1C\u0D3F\u0D38\u0D4D\u0D1F\u0D4D\u0D30\u0D47\u0D37\u0D7B, \u0D15\u0D3E\u0D7C\u0D37\u0D3F\u0D15 \u0D2D\u0D42\u0D2E\u0D3F \u0D28\u0D3F\u0D15\u0D41\u0D24\u0D3F\u0D15\u0D7E, \u0D17\u0D35 \u0D2A\u0D2C\u0D4D\u0D32\u0D3F\u0D15\u0D4D \u0D2A\u0D46\u0D7B\u0D37\u0D28\u0D41\u0D15\u0D7E, \u0D24\u0D4A\u0D34\u0D3F\u0D32\u0D31\u0D2A\u0D4D\u0D2A\u0D4D \u0D05\u0D2A\u0D47\u0D15\u0D4D\u0D37\u0D15\u0D7E \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 \u0D15\u0D48\u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D02 \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41.`,
-          en: `Handles civic certificates, land revenue listings, digital fast track public registrations, and state pension filings.`,
-          hi: `\u091C\u0928\u094D\u092E-\u092E\u0943\u0924\u094D\u092F\u0941 \u092A\u094D\u0930\u092E\u093E\u0923 \u092A\u0924\u094D\u0930, \u092D\u0942\u092E\u093F \u0915\u0930 \u0938\u0902\u0917\u094D\u0930\u0939, \u092E\u0928\u0930\u0947\u0917\u093E \u091C\u0949\u092C \u0915\u093E\u0930\u094D\u0921 \u092A\u0902\u091C\u0940\u0915\u0930\u0923 \u0914\u0930 \u0930\u093E\u091C\u094D\u092F \u0915\u0932\u094D\u092F\u093E\u0923\u0915\u093E\u0930\u0940 \u092A\u0947\u0902\u0936\u0928 \u0906\u0935\u0947\u0926\u0928 \u0915\u0947\u0902\u0926\u094D\u0930\u0964`,
-          te: `\u0C1C\u0C28\u0C28 \u0C2E\u0C30\u0C23 \u0C27\u0C43\u0C35\u0C40\u0C15\u0C30\u0C23 \u0C2A\u0C24\u0C4D\u0C30\u0C3E\u0C32\u0C41, \u0C2D\u0C42\u0C2E\u0C41\u0C32\u0C41 \u0C2A\u0C28\u0C4D\u0C28\u0C41 \u0C30\u0C3F\u0C15\u0C3E\u0C30\u0C4D\u0C21\u0C41\u0C32\u0C41 \u0C09\u0C2A\u0C3E\u0C27\u0C3F \u0C39\u0C3E\u0C2E\u0C40 \u0C2A\u0C25\u0C15 \u0C28\u0C2E\u0C4B\u0C26\u0C41 \u0C26\u0C30\u0C16\u0C3E\u0C38\u0C4D\u0C24\u0C41\u0C32\u0C41 \u0C07\u0C15\u0C4D\u0C15\u0C21 \u0C38\u0C2E\u0C30\u0C4D\u0C2A\u0C3F\u0C02\u0C1A\u0C35\u0C1A\u0C4D\u0C1A\u0C41.`
-        },
-        category: {
-          ml: "\u0D24\u0D26\u0D4D\u0D26\u0D47\u0D36 \u0D38\u0D4D\u0D35\u0D2F\u0D02\u0D2D\u0D30\u0D23\u0D02 / \u0D2A\u0D1E\u0D4D\u0D1A\u0D3E\u0D2F\u0D24\u0D4D\u0D24\u0D4D",
-          en: "Grama Panchayat Office",
-          hi: "\u0917\u094D\u0930\u093E\u092E \u092A\u0902\u091A\u093E\u092F\u0924 \u0915\u093E\u0930\u094D\u092F\u093E\u0932\u092F",
-          te: "\u0C17\u0C4D\u0C30\u0C3E\u0C2E \u0C2A\u0C02\u0C1A\u0C3E\u0C2F\u0C24\u0C40 \u0C15\u0C3E\u0C30\u0C4D\u0C2F\u0C3E\u0C32\u0C2F\u0C02"
-        },
-        hours: {
-          ml: "\u0D30\u0D3E\u0D35\u0D3F\u0D32\u0D46 10:00 - \u0D35\u0D48\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D47\u0D30\u0D02 5:00 (\u0D1E\u0D3E\u0D2F\u0D7C \u0D12\u0D34\u0D3F\u0D15\u0D46)",
-          en: "10:00 AM - 5:00 PM (Closed Sundays & Government Holidays)",
-          hi: "\u0938\u0941\u092C\u0939 10:00 - \u0936\u093E\u092E 5:00 (\u0930\u0935\u093F\u0935\u093E\u0930 \u0914\u0930 \u0930\u093E\u091C\u092A\u0924\u094D\u0930\u093F\u0924 \u0905\u0935\u0915\u093E\u0936\u094B\u0902 \u092A\u0930 \u092C\u0902\u0926)",
-          te: "\u0C09\u0C26\u0C2F\u0C02 10:00 - \u0C38\u0C3E\u0C2F\u0C02\u0C24\u0C4D\u0C30\u0C02 4:00 (\u0C06\u0C26\u0C3F\u0C35\u0C3E\u0C30\u0C02 \u0C2E\u0C30\u0C3F\u0C2F\u0C41 \u0C38\u0C46\u0C32\u0C35\u0C41\u0C32\u0C32\u0C4B \u0C2E\u0C42\u0C38\u0C3F\u0C35\u0C47\u0C2F\u0C2C\u0C21\u0C41\u0C24\u0C41\u0C02\u0C26\u0C3F)"
-        }
-      };
-    }
-    const indexSuffix = ` - #${Math.floor(i / 10) + 1}`;
-    generated.title.ml += indexSuffix;
-    generated.title.en += indexSuffix;
-    generated.title.hi += indexSuffix;
-    generated.title.te += indexSuffix;
-    result.push({
-      id: `serv-${i + 1}`,
-      categoryKey: catKey,
-      phoneNumber,
-      lastVerified,
-      isEmergency,
-      districtName: district.en,
-      panchayatName: isMainlyTargeted ? "Azhiyur" : localityNameEn,
-      localityName: localityNameEn,
-      translations: {
-        ml: {
-          title: generated.title.ml,
-          description: generated.description.ml,
-          category: generated.category.ml,
-          location: `${localityNameMl}, ${district.ml} \u0D1C\u0D3F\u0D32\u0D4D\u0D32, \u0D15\u0D47\u0D30\u0D33\u0D02`,
-          hours: generated.hours.ml,
-          contactName: contactObj.ml
-        },
-        en: {
-          title: generated.title.en,
-          description: generated.description.en,
-          category: generated.category.en,
-          location: `${localityNameEn}, ${district.en} District, Kerala`,
-          hours: generated.hours.en,
-          contactName: contactObj.en
-        },
-        hi: {
-          title: generated.title.hi,
-          description: generated.description.hi,
-          category: generated.category.hi,
-          location: `${localityNameHi}, ${district.hi} \u091C\u093F\u0932\u093E, \u0915\u0947\u0930\u0932`,
-          hours: generated.hours.hi,
-          contactName: contactObj.hi
-        },
-        te: {
-          title: generated.title.te,
-          description: generated.description.te,
-          category: generated.category.te,
-          location: `${localityNameTe}, ${district.te}  \u0C1C\u0C3F\u0C32\u0C4D\u0C32\u0C3E, \u0C15\u0C47\u0C30\u0C33`,
-          hours: generated.hours.te,
-          contactName: contactObj.te
-        }
-      }
+
+        result.push({
+          id: `pnc-${pncEn.toLowerCase().replace(/\s+/g, '-')}-${catKey}`,
+          categoryKey: catKey,
+          phoneNumber,
+          lastVerified,
+          isEmergency,
+          districtName: dist.en,
+          panchayatName: pncEn,
+          localityName: pncEn,
+          translations: {
+            ml: {
+              title: generated.title.ml,
+              description: generated.description.ml,
+              category: generated.category.ml,
+              location: `${pncMl}, ${dist.ml} ജില്ല, കേരളം`,
+              hours: generated.hours.ml,
+              contactName: contactObj.ml
+            },
+            en: {
+              title: generated.title.en,
+              description: generated.description.en,
+              category: generated.category.en,
+              location: `${pncEn}, ${dist.en} District, Kerala`,
+              hours: generated.hours.en,
+              contactName: contactObj.en
+            },
+            hi: {
+              title: generated.title.hi,
+              description: generated.description.hi,
+              category: generated.category.hi,
+              location: `${pncEn}, ${dist.hi || dist.en} जिला, केरल`,
+              hours: generated.hours.hi,
+              contactName: contactObj.hi
+            },
+            te: {
+              title: generated.title.te,
+              description: generated.description.te,
+              category: generated.category.te,
+              location: `${pncEn}, ${dist.te || dist.en} జిల్లా, కేరళ`,
+              hours: generated.hours.te,
+              contactName: contactObj.te
+            }
+          }
+        });
+      });
     });
-  }
+  });
+
   return result;
 }
+
 const INITIAL_SERVICES = generateRemainingServices();
+
 export {
   INITIAL_SERVICES,
   KERALA_DISTRICTS,

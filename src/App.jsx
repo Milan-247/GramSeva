@@ -60,7 +60,21 @@ import {
   CheckCircle2,
   Keyboard,
   Sparkles,
-  Palette
+  Palette,
+  LogIn,
+  LogOut,
+  ShieldCheck,
+  Smartphone,
+  IdCard,
+  UserCheck,
+  Mic,
+  MicOff,
+  History,
+  QrCode,
+  Printer,
+  Download,
+  BookmarkCheck,
+  FolderCheck
 } from "lucide-react";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext";
 import uiBackdrop from "./assets/gramseva-bg.svg";
@@ -71,9 +85,14 @@ import {
   AZHIYUR_SUB_LOCALITIES,
   LOCALITIES_EN
 } from "./data/services";
+import {
+  KERALA_DISTRICTS_LIST,
+  KERALA_PANCHAYATS_BY_DISTRICT
+} from "./data/keralaPanchayatsData.js";
 
 import { DirectorySkeleton, MapSkeleton } from "./components/Skeletons.jsx";
 import LanguageWheel from "./components/LanguageWheel.jsx";
+import RequiredDocumentsAccordion from "./components/RequiredDocumentsAccordion.jsx";
 
 const ServiceMap = lazy(() => import("./components/ServiceMap.jsx"));
 const CertificateResolver = lazy(() => import("./components/CertificateResolver.jsx"));
@@ -335,6 +354,96 @@ function DirectoryApp() {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+
+  // QOL #5: Recent Search History State
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const saved = localStorage.getItem("gramseva_recent_searches");
+      return saved ? JSON.parse(saved) : ["Income Certificate", "Farmer Subsidy", "KSEB Electricity", "Primary Health Center", "Drinking Water"];
+    } catch (e) {
+      return ["Income Certificate", "Farmer Subsidy", "KSEB Electricity", "Primary Health Center"];
+    }
+  });
+
+  const saveRecentSearch = (term) => {
+    if (!term || term.trim().length < 2) return;
+    const cleaned = term.trim();
+    setRecentSearches((prev) => {
+      const filtered = prev.filter((s) => s.toLowerCase() !== cleaned.toLowerCase());
+      const updated = [cleaned, ...filtered].slice(0, 6);
+      try {
+        localStorage.setItem("gramseva_recent_searches", JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    try {
+      localStorage.removeItem("gramseva_recent_searches");
+    } catch (e) {}
+  };
+
+  // QOL #6: Web Speech API Voice Search
+  const handleVoiceSearch = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice search is not supported in this browser. Please type your query in the search bar.");
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = language === "ml" ? "ml-IN" : language === "hi" ? "hi-IN" : language === "te" ? "te-IN" : "en-IN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setSearchQuery(transcript);
+          saveRecentSearch(transcript);
+        }
+      };
+
+      recognition.start();
+    } catch (e) {
+      setIsListening(false);
+    }
+  };
+
+  // QOL #1: Saved Citizen Document Wallet State
+  const [walletDocs, setWalletDocs] = useState(() => {
+    try {
+      const saved = localStorage.getItem("gramseva_held_docs");
+      return saved ? JSON.parse(saved) : ["aadhaar", "ration_card", "income_cert"];
+    } catch (e) {
+      return ["aadhaar", "ration_card"];
+    }
+  });
+
+  const toggleWalletDoc = (docId) => {
+    setWalletDocs((prev) => {
+      const next = prev.includes(docId) ? prev.filter((d) => d !== docId) : [...prev, docId];
+      try {
+        localStorage.setItem("gramseva_held_docs", JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [mapCategoryFilter, setMapCategoryFilter] = useState("all");
   const [selectedDistrict, setSelectedDistrict] = useState("Kozhikode");
@@ -353,6 +462,130 @@ function DirectoryApp() {
   const [isLargeText, setIsLargeText] = useState(false);
   const [isHighContrast, setIsHighContrast] = useState(false);
   const [isUiPending, startUiTransition] = useTransition();
+
+  // User Authentication & Citizen Profile state
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("gramseva_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [loginMethod, setLoginMethod] = useState("otp");
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginAadhaar, setLoginAadhaar] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpInput, setOtpInput] = useState("");
+  const [loginNameInput, setLoginNameInput] = useState("");
+  const [loginRoleInput, setLoginRoleInput] = useState("Resident / Citizen");
+  const [loginError, setLoginError] = useState("");
+
+  const DEMO_ACCOUNTS = [
+    {
+      name: "Suresh Kumar",
+      phone: "+91 94470 12345",
+      aadhaarLast4: "8912",
+      district: "Kozhikode",
+      locality: "Azhiyur",
+      role: "Resident / Farmer",
+      roleBadge: "Villager",
+      rationCard: "BPL (Pink Card)",
+      avatarColor: "bg-emerald-600"
+    },
+    {
+      name: "Smt. Anitha C. V.",
+      phone: "+91 94471 98765",
+      aadhaarLast4: "4321",
+      district: "Kozhikode",
+      locality: "Azhiyur",
+      role: "Panchayat President",
+      roleBadge: "Official",
+      rationCard: "APL (White Card)",
+      avatarColor: "bg-amber-600"
+    },
+    {
+      name: "Fatima Beevi",
+      phone: "+91 94472 55443",
+      aadhaarLast4: "6789",
+      district: "Kottayam",
+      locality: "Vaikom",
+      role: "Asha Worker / Health Volunteer",
+      roleBadge: "Health Worker",
+      rationCard: "Non-Priority (Blue Card)",
+      avatarColor: "bg-teal-600"
+    }
+  ];
+
+  const handleQuickDemoLogin = (account) => {
+    const userObj = {
+      ...account,
+      loggedInAt: new Date().toISOString()
+    };
+    setCurrentUser(userObj);
+    try {
+      localStorage.setItem("gramseva_user", JSON.stringify(userObj));
+    } catch (e) {}
+    setSuccessToast(`Welcome back, ${account.name}!`);
+    setTimeout(() => setSuccessToast(""), 3500);
+  };
+
+  const handleSendOtp = (e) => {
+    e.preventDefault();
+    if (loginMethod === "otp" && !loginPhone.trim()) {
+      setLoginError("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+    if (loginMethod === "aadhaar" && loginAadhaar.replace(/\s+/g, "").length < 12) {
+      setLoginError("Please enter a 12-digit Aadhaar number.");
+      return;
+    }
+    setLoginError("");
+    setOtpSent(true);
+    setOtpInput("1947");
+  };
+
+  const handleVerifyAndLogin = (e) => {
+    e.preventDefault();
+    if (!otpInput || otpInput.trim().length < 4) {
+      setLoginError("Please enter the 4-digit OTP code.");
+      return;
+    }
+    const name = loginNameInput.trim() || (loginMethod === "otp" ? `Resident (${loginPhone.slice(-4) || "Mobile"})` : `Aadhaar Holder (${loginAadhaar.slice(-4) || "Card"})`);
+    const userObj = {
+      name,
+      phone: loginPhone ? `+91 ${loginPhone}` : "+91 98470 00000",
+      aadhaarLast4: loginAadhaar ? loginAadhaar.slice(-4) : "1947",
+      district: selectedDistrict !== "all" ? selectedDistrict : "Kozhikode",
+      locality: selectedLocality !== "all" ? selectedLocality : "Azhiyur",
+      role: loginRoleInput,
+      roleBadge: "Verified Citizen",
+      rationCard: "Priority BPL",
+      avatarColor: "bg-emerald-700",
+      loggedInAt: new Date().toISOString()
+    };
+    setCurrentUser(userObj);
+    try {
+      localStorage.setItem("gramseva_user", JSON.stringify(userObj));
+    } catch (e) {}
+    setOtpSent(false);
+    setOtpInput("");
+    setLoginPhone("");
+    setLoginAadhaar("");
+    setLoginNameInput("");
+    setLoginError("");
+    setSuccessToast(`Logged in successfully as ${name}`);
+    setTimeout(() => setSuccessToast(""), 3500);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem("gramseva_user");
+    } catch (e) {}
+    setSuccessToast("Logged out successfully");
+    setTimeout(() => setSuccessToast(""), 3500);
+  };
   const [settledSearchQuery, setSettledSearchQuery] = useState("");
   const searchInputRef = useRef(null);
   const navigateToTab = (tabId) => {
@@ -1149,7 +1382,19 @@ Phone: ${service.phoneNumber}`;
           <button onClick={() => navigateToTab("map")} className={currentTab === "map" ? "active" : ""} role="tab" aria-selected={currentTab === "map"}>Map Grid</button>
           <button onClick={() => navigateToTab("suggest")} className={currentTab === "suggest" ? "active" : ""} role="tab" aria-selected={currentTab === "suggest"}>Contribute</button>
         </div>
-        <button onClick={() => navigateToTab("profile")} className="follow-link">Open Controls</button>
+        <button onClick={() => navigateToTab("profile")} className="follow-link flex items-center gap-1.5 cursor-pointer">
+          {currentUser ? (
+            <>
+              <User className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{currentUser.name.split(' ')[0]}</span>
+            </>
+          ) : (
+            <>
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Profile & Login</span>
+            </>
+          )}
+        </button>
       </nav>
       
       {
@@ -1279,34 +1524,94 @@ Phone: ${service.phoneNumber}`;
                   type="text"
                   aria-busy={searchQuery !== settledSearchQuery}
                   aria-label="Search services by name, category, place, contact, or language"
-                  placeholder={t.searchPlaceholder || "Search services..."}
+                  placeholder={t.searchPlaceholder || "Search services or speak..."}
                   value={searchQuery}
                   onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 140)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      saveRecentSearch(searchQuery);
+                    }
+                  }}
                   className="w-full text-slate-800 placeholder-slate-400 bg-transparent text-xs sm:text-sm py-2 sm:py-2.5 px-2 outline-none border-none leading-none font-semibold min-h-[38px] sm:min-h-[42px]"
                 />
+
+                {/* QOL #6: Voice Search Button */}
+                <button
+                  type="button"
+                  onClick={handleVoiceSearch}
+                  className={`p-1.5 mr-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
+                    isListening
+                      ? "bg-rose-500 text-white animate-pulse"
+                      : "text-emerald-700 hover:bg-emerald-50 active:scale-95"
+                  }`}
+                  title={isListening ? "Listening... Speak now" : "Voice Search (Speak in Malayalam, Hindi, or English)"}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+
                 {searchQuery ? (
                   <button onClick={() => setSearchQuery("")} className="search-clear" aria-label="Clear search">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 ) : (
-                  <span className="search-shortcut" aria-hidden="true"><Keyboard className="w-3.5 h-3.5" /> /</span>
+                  <span className="search-shortcut hidden sm:inline" aria-hidden="true"><Keyboard className="w-3.5 h-3.5" /> /</span>
                 )}
               </div>
-              {isSearchFocused && searchSuggestions.length > 0 && (
-                <div className="search-suggestions absolute top-full mt-2 left-0 right-0 z-40 bg-white/95 text-slate-900 border border-slate-200 rounded-xl shadow-xl p-2">
-                  <div className="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">{ui.searchSuggestions}</div>
-                  {searchSuggestions.map((item) => (
-                    <button
-                      key={item.id}
-                      onMouseDown={() => setSearchQuery(item.label)}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-100 transition flex items-center justify-between gap-3"
-                    >
-                      <span className="text-xs font-bold truncate">{item.label}</span>
-                      <span className="text-[10px] text-emerald-700 font-bold shrink-0">{item.helper}</span>
-                    </button>
-                  ))}
+
+              {/* QOL #5: Search Suggestions & Recent Search History Dropdown */}
+              {isSearchFocused && (
+                <div className="search-suggestions absolute top-full mt-2 left-0 right-0 z-40 bg-white text-slate-900 border border-stone-200 rounded-xl shadow-xl p-2.5">
+                  {searchQuery.trim().length > 0 ? (
+                    searchSuggestions.length > 0 ? (
+                      <>
+                        <div className="px-2 pb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">{ui.searchSuggestions}</div>
+                        {searchSuggestions.map((item) => (
+                          <button
+                            key={item.id}
+                            onMouseDown={() => {
+                              setSearchQuery(item.label);
+                              saveRecentSearch(item.label);
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-emerald-50 transition flex items-center justify-between gap-3 cursor-pointer"
+                          >
+                            <span className="text-xs font-bold truncate text-slate-900">{item.label}</span>
+                            <span className="text-[10px] text-emerald-700 font-bold shrink-0">{item.helper}</span>
+                          </button>
+                        ))}
+                      </>
+                    ) : null
+                  ) : (
+                    recentSearches.length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between px-2 pb-1.5 border-b border-stone-100 mb-1">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                            <History className="w-3 h-3 text-emerald-600" /> Recent Searches
+                          </span>
+                          <button
+                            onMouseDown={clearRecentSearches}
+                            className="text-[9px] font-bold text-slate-400 hover:text-rose-600 cursor-pointer"
+                          >
+                            Clear History
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {recentSearches.map((term, idx) => (
+                            <button
+                              key={idx}
+                              onMouseDown={() => {
+                                setSearchQuery(term);
+                              }}
+                              className="bg-stone-100 hover:bg-emerald-100 text-slate-800 hover:text-emerald-950 border border-stone-200 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>🔍 {term}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -1349,16 +1654,19 @@ Phone: ${service.phoneNumber}`;
                   className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer border-none py-0 pr-1 [&>option]:bg-slate-900 [&>option]:text-white max-w-[170px] truncate"
                   aria-label="Select Locality or Panchayat"
                 >
-                  <option value="all">All Places in {selectedDistrict === "all" ? "Kerala" : selectedDistrict}</option>
-                  {selectedDistrict === "Kozhikode" && (
-                    <option value="Azhiyur" className="font-extrabold text-emerald-300">
-                      Azhiyur Panchayat (All Places)
-                    </option>
-                  )}
-                  {selectedDistrict === "Kozhikode" ? (
-                    AZHIYUR_SUB_LOCALITIES.map((loc) => (
-                      <option key={loc.en} value={loc.en}>
-                        {loc.en === "Azhiyur" ? "— Azhiyur Town" : `— ${loc[language] || loc.en}`}
+                  <option value="all">All Places in {selectedDistrict === "all" ? "Kerala (941 Panchayats)" : selectedDistrict}</option>
+                  {selectedDistrict === "all" ? (
+                    KERALA_DISTRICTS_LIST.flatMap((d) =>
+                      (KERALA_PANCHAYATS_BY_DISTRICT[d.en] || []).map((p) => (
+                        <option key={`${d.en}_${p.en}`} value={p.en}>
+                          {p.en}{language === "ml" && p.ml ? ` (${p.ml})` : language === "hi" && p.hi ? ` (${p.hi})` : language === "te" && p.te ? ` (${p.te})` : ""} &middot; {d.en}
+                        </option>
+                      ))
+                    )
+                  ) : KERALA_PANCHAYATS_BY_DISTRICT[selectedDistrict] ? (
+                    KERALA_PANCHAYATS_BY_DISTRICT[selectedDistrict].map((p) => (
+                      <option key={p.en} value={p.en}>
+                        {p.en}{language === "ml" && p.ml ? ` (${p.ml})` : language === "hi" && p.hi ? ` (${p.hi})` : language === "te" && p.te ? ` (${p.te})` : ""}
                       </option>
                     ))
                   ) : (
@@ -1371,6 +1679,32 @@ Phone: ${service.phoneNumber}`;
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* QOL #5: Popular Quick Topic Chips for Villagers */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1.5 pb-0.5 text-[11px] font-bold">
+            <span className="text-[10px] uppercase font-black text-emerald-200/80 shrink-0">Popular:</span>
+            {[
+              { label: "🌾 Farmer Schemes", query: "Krishi Bhavan" },
+              { label: "🪪 Income Cert", query: "Income Certificate" },
+              { label: "⚡ KSEB Power", query: "KSEB" },
+              { label: "💧 Water Supply", query: "Water Authority" },
+              { label: "🏥 Health Center", query: "Health Center" },
+              { label: "🚌 Bus Depot", query: "KSRTC" },
+              { label: "🏫 Anganwadi", query: "Anganwadi" }
+            ].map((tag, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setSearchQuery(tag.query);
+                  saveRecentSearch(tag.query);
+                }}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-2.5 py-1 rounded-full shrink-0 transition cursor-pointer active:scale-95"
+              >
+                {tag.label}
+              </button>
+            ))}
           </div>
 
         </header>
@@ -1527,10 +1861,10 @@ Phone: ${service.phoneNumber}`;
                                           initial={shouldReduceMotion ? false : { opacity: 0, y: 5 }}
                                           animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
                                           exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                                          whileHover={shouldReduceMotion ? undefined : { y: -2 }}
-                                          whileTap={shouldReduceMotion ? undefined : { scale: 0.985, y: 0 }}
-                                          transition={{ duration: shouldReduceMotion ? 0 : 0.16, delay: shouldReduceMotion ? 0 : Math.min(index * 0.012, 0.08), ease: [0.2, 0.8, 0.2, 1] }}
-                                          className="service-card bg-white border border-stone-200/90 hover:border-emerald-500/60 p-4 sm:p-5 transition flex flex-col relative rounded-xl shadow-2xs hover:shadow-md cursor-pointer select-none active:shadow-xs"
+                                          whileHover={shouldReduceMotion ? undefined : { y: -5, scale: 1.008 }}
+                                          whileTap={shouldReduceMotion ? undefined : { scale: 0.98, y: -1 }}
+                                          transition={{ duration: shouldReduceMotion ? 0 : 0.25, delay: shouldReduceMotion ? 0 : Math.min(index * 0.012, 0.08), ease: [0.16, 1, 0.3, 1] }}
+                                          className="service-card bg-white border border-stone-200/90 hover:border-emerald-500/60 p-4 sm:p-5 transition-all duration-300 flex flex-col relative rounded-xl shadow-2xs hover:shadow-xl cursor-pointer select-none active:shadow-xs"
                                         >
                                           {primary.isEmergency && <div className="absolute top-0 bottom-0 left-0 w-1 bg-rose-500 rounded-l-xl" />}
 
@@ -1590,6 +1924,8 @@ Phone: ${service.phoneNumber}`;
                                               </div>
                                             </div>
                                           </div>
+
+                                          <RequiredDocumentsAccordion service={primary} language={language} className="mt-3" />
 
                                           {unitCount > 1 && (
                                             <div className="mt-3 pt-3 border-t border-stone-200">
@@ -1673,10 +2009,10 @@ Phone: ${service.phoneNumber}`;
                                   initial={shouldReduceMotion ? false : { opacity: 0, y: 5 }}
                                   animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
                                   exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                                  whileHover={shouldReduceMotion ? undefined : { y: -2 }}
-                                  whileTap={shouldReduceMotion ? undefined : { scale: 0.985, y: 0 }}
-                                  transition={{ duration: shouldReduceMotion ? 0 : 0.16, delay: shouldReduceMotion ? 0 : Math.min(index * 0.012, 0.08), ease: [0.2, 0.8, 0.2, 1] }}
-                                  className="service-card bg-white border border-stone-200/90 hover:border-emerald-500/60 p-4 sm:p-5 transition flex flex-col relative rounded-xl shadow-2xs hover:shadow-md cursor-pointer select-none active:shadow-xs"
+                                  whileHover={shouldReduceMotion ? undefined : { y: -5, scale: 1.008 }}
+                                  whileTap={shouldReduceMotion ? undefined : { scale: 0.98, y: -1 }}
+                                  transition={{ duration: shouldReduceMotion ? 0 : 0.25, delay: shouldReduceMotion ? 0 : Math.min(index * 0.012, 0.08), ease: [0.16, 1, 0.3, 1] }}
+                                  className="service-card bg-white border border-stone-200/90 hover:border-emerald-500/60 p-4 sm:p-5 transition-all duration-300 flex flex-col relative rounded-xl shadow-2xs hover:shadow-xl cursor-pointer select-none active:shadow-xs"
                                 >
                                   {primary.isEmergency && <div className="absolute top-0 bottom-0 left-0 w-1 bg-rose-500 rounded-l-xl" />}
 
@@ -1736,6 +2072,8 @@ Phone: ${service.phoneNumber}`;
                                       </div>
                                     </div>
                                   </div>
+
+                                  <RequiredDocumentsAccordion service={primary} language={language} className="mt-3" />
 
                                   {unitCount > 1 && (
                                     <div className="mt-3 pt-3 border-t border-stone-200">
@@ -1827,7 +2165,15 @@ Phone: ${service.phoneNumber}`;
           {/* Tab Content: Certificate Dependency Resolver (AO* Graph Search) */}
           {currentTab === "resolver" && (
             <Suspense fallback={<DirectorySkeleton />}>
-              <CertificateResolver language={language} />
+              <CertificateResolver
+                language={language}
+                selectedDistrict={selectedDistrict === "all" ? "Kozhikode" : selectedDistrict}
+                selectedLocality={selectedLocality === "all" ? "Azhiyur" : selectedLocality}
+                onSelectPanchayat={(dist, panch) => {
+                  setSelectedDistrict(dist);
+                  setSelectedLocality(panch);
+                }}
+              />
             </Suspense>
           )}
 
@@ -2026,19 +2372,325 @@ Phone: ${service.phoneNumber}`;
     /* Tab Content 4: Profile / Diagnostic settings */
   }
           {currentTab === "profile" && <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-4 md:pt-6 pb-24 scrollbar-none bg-white text-slate-900">
-              <div className="border-b border-stone-200 pb-3 max-w-5xl mx-auto">
-                <h3 className="font-classical text-lg font-black text-slate-900 tracking-wide">
-                  Directory Settings
-                </h3>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  Local data controls, place filters, and offline access.
-                </p>
+              <div className="border-b border-stone-200 pb-3 max-w-5xl mx-auto flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="font-classical text-lg font-black text-slate-900 tracking-wide flex items-center gap-2">
+                    <User className="w-5 h-5 text-emerald-700" />
+                    <span>Citizen Profile & Directory Settings</span>
+                  </h3>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Manage your village account, saved document wallet, local location preferences, and offline data controls.
+                  </p>
+                </div>
+
+                {currentUser && (
+                  <span className="bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold px-2.5 py-1 rounded-full text-[10px] hidden sm:flex items-center gap-1.5 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                    Logged In: {currentUser.name}
+                  </span>
+                )}
               </div>
 
-              {
-    /* State Controls Block */
-  }
-              <div className="max-w-5xl mx-auto mt-4 grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+              <div className="max-w-5xl mx-auto mt-4 space-y-6">
+
+              {/* 1. CITIZEN ACCOUNT / LOGIN & LOGOUT SECTION */}
+              {currentUser ? (
+                /* LOGGED IN USER PROFILE CARD WITH LOGOUT BUTTON */
+                <div className="bg-white text-slate-900 rounded-2xl p-5 shadow-sm border border-stone-200/90 relative overflow-hidden">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className={`w-14 h-14 rounded-2xl ${currentUser.avatarColor || "bg-emerald-700"} border-2 border-stone-200 flex items-center justify-center font-black text-2xl text-white shadow-xs shrink-0`}>
+                        {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : "U"}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-classical text-lg font-black text-slate-900 tracking-wide">{currentUser.name}</h4>
+                          <span className="bg-emerald-100/80 border border-emerald-300 text-emerald-800 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                            {currentUser.roleBadge || "Verified Citizen"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 font-medium mt-0.5 flex items-center gap-2 flex-wrap">
+                          <span>📱 {currentUser.phone}</span>
+                          <span>•</span>
+                          <span>📍 {currentUser.locality}, {currentUser.district}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* LOGOUT BUTTON IN PROFILE */}
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-black px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer active:scale-95 shrink-0 self-end sm:self-auto shadow-2xs"
+                      title="Log out of GramSeva"
+                    >
+                      <LogOut className="w-4 h-4 text-rose-600" />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+
+                  {/* User Details Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 text-xs">
+                    <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-2.5">
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Aadhaar e-KYC</span>
+                      <span className="font-extrabold text-slate-900 text-[11px] flex items-center gap-1 mt-0.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        XXXX {currentUser.aadhaarLast4 || "8912"}
+                      </span>
+                    </div>
+                    <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-2.5">
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Ration Card</span>
+                      <span className="font-extrabold text-slate-900 text-[11px] mt-0.5 block truncate">{currentUser.rationCard || "Priority BPL"}</span>
+                    </div>
+                    <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-2.5">
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Designation</span>
+                      <span className="font-extrabold text-slate-900 text-[11px] mt-0.5 block truncate">{currentUser.role || "Resident"}</span>
+                    </div>
+                    <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-2.5">
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Session</span>
+                      <span className="font-extrabold text-emerald-700 text-[11px] mt-0.5 flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Verified & Saved
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* LOGGED OUT LOGIN & REGISTRATION CARD - WHITE BACKGROUND */
+                <div className="bg-white text-slate-900 rounded-2xl p-5 shadow-sm border border-stone-200">
+                  <div className="flex items-center justify-between border-b border-stone-200 pb-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
+                        <LogIn className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-classical text-base font-black text-slate-900 tracking-wide">
+                          Citizen & Panchayat Login{language === "ml" ? " (പൗര ലോഗിൻ)" : language === "hi" ? " (नागरिक और पंचायत लॉगिन)" : language === "te" ? " (పౌరుల లాగిన్)" : ""}
+                        </h4>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          Log in with your mobile number or Aadhaar card to track certificate applications and saved documents.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Demo One-Click Accounts */}
+                  <div className="mb-4 bg-stone-50/80 border border-stone-200 rounded-xl p-3">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 block mb-2">
+                      ⚡ Instant One-Click Login (Select Demo Citizen Profile):
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {DEMO_ACCOUNTS.map((acc, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleQuickDemoLogin(acc)}
+                          className="text-left bg-white hover:bg-emerald-50/70 border border-stone-200 hover:border-emerald-400/80 rounded-lg p-2.5 transition cursor-pointer group active:scale-95 shadow-2xs"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-900 group-hover:text-emerald-900">{acc.name}</span>
+                            <span className="text-[8px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded uppercase">{acc.roleBadge}</span>
+                          </div>
+                          <span className="text-[9px] text-slate-500 block mt-0.5">{acc.locality}, {acc.district}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Form */}
+                  <div className="bg-stone-50/90 border border-stone-200 rounded-xl p-3.5 space-y-3">
+                    <div className="flex items-center justify-between border-b border-stone-200 pb-2 flex-wrap gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Or Log In With Custom Mobile / Aadhaar:</span>
+                      <div className="flex items-center gap-1 bg-stone-200/80 p-0.5 rounded-lg text-[9px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => { setLoginMethod("otp"); setOtpSent(false); }}
+                          className={`px-2.5 py-1 rounded-md transition cursor-pointer ${loginMethod === "otp" ? "bg-emerald-700 text-white shadow-2xs" : "text-slate-600 hover:text-slate-900"}`}
+                        >
+                          Mobile OTP
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setLoginMethod("aadhaar"); setOtpSent(false); }}
+                          className={`px-2.5 py-1 rounded-md transition cursor-pointer ${loginMethod === "aadhaar" ? "bg-emerald-700 text-white shadow-2xs" : "text-slate-600 hover:text-slate-900"}`}
+                        >
+                          Aadhaar e-KYC
+                        </button>
+                      </div>
+                    </div>
+
+                    {loginError && (
+                      <div className="bg-rose-50 border border-rose-200 text-rose-800 text-[10px] p-2 rounded-lg font-bold">
+                        ⚠️ {loginError}
+                      </div>
+                    )}
+
+                    {!otpSent ? (
+                      <form onSubmit={handleSendOtp} className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[9px] text-slate-600 uppercase font-bold tracking-wider block mb-1">
+                              Your Full Name
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Suresh Kumar"
+                              value={loginNameInput}
+                              onChange={(e) => setLoginNameInput(e.target.value)}
+                              className="w-full bg-white border border-stone-300 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-emerald-600"
+                            />
+                          </div>
+                          <div>
+                            {loginMethod === "otp" ? (
+                              <>
+                                <label className="text-[9px] text-slate-600 uppercase font-bold tracking-wider block mb-1">
+                                  10-Digit Mobile Number
+                                </label>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="bg-stone-100 border border-stone-300 text-slate-700 text-xs px-2 py-1.5 rounded-lg font-mono">+91</span>
+                                  <input
+                                    type="tel"
+                                    placeholder="94470 12345"
+                                    value={loginPhone}
+                                    onChange={(e) => setLoginPhone(e.target.value)}
+                                    className="w-full bg-white border border-stone-300 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none focus:border-emerald-600"
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <label className="text-[9px] text-slate-600 uppercase font-bold tracking-wider block mb-1">
+                                  12-Digit Aadhaar Number
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="1234 5678 9012"
+                                  value={loginAadhaar}
+                                  onChange={(e) => setLoginAadhaar(e.target.value)}
+                                  className="w-full bg-white border border-stone-300 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none focus:border-emerald-600"
+                                />
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-1">
+                          <button
+                            type="submit"
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer active:scale-95 shadow-xs"
+                          >
+                            <Smartphone className="w-3.5 h-3.5" />
+                            <span>Send Demo OTP →</span>
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleVerifyAndLogin} className="space-y-3 animate-fade-in">
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-[10px] text-emerald-900 flex items-center justify-between">
+                          <span>OTP sent to {loginMethod === "otp" ? `+91 ${loginPhone}` : `Aadhaar ending in ${loginAadhaar.slice(-4)}`}.</span>
+                          <span className="font-mono bg-emerald-700 text-white px-1.5 py-0.5 rounded font-bold">Demo OTP: 1947</span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <label className="text-[9px] text-slate-600 uppercase font-bold tracking-wider block mb-1">
+                              Enter 4-Digit OTP Code
+                            </label>
+                            <input
+                              type="text"
+                              maxLength={4}
+                              placeholder="1947"
+                              value={otpInput}
+                              onChange={(e) => setOtpInput(e.target.value)}
+                              className="w-full bg-white border border-stone-300 focus:border-emerald-600 text-slate-900 font-mono text-center text-base tracking-[0.3em] font-black rounded-lg py-1.5 outline-none shadow-2xs"
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer active:scale-95 mt-5 shadow-xs"
+                          >
+                            <LogIn className="w-4 h-4" />
+                            <span>Verify & Log In</span>
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* QOL #1: CITIZEN DOCUMENT WALLET & CERTIFICATE VAULT */}
+              <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-emerald-200/80 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <FolderCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-classical text-base font-black text-slate-900 tracking-wide flex items-center gap-2">
+                        <span>Digital Document Wallet & Certificates</span>
+                        <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full">
+                          {walletDocs.length} Saved
+                        </span>
+                      </h4>
+                      <p className="text-[10px] text-slate-500 font-medium">
+                        Quick-access vault for ration cards, income certificates, land deeds, and pension slips for village applications.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Wallet Docs Grid */}
+                {walletDocs.length === 0 ? (
+                  <div className="bg-white/80 border border-dashed border-stone-300 rounded-xl p-4 text-center">
+                    <QrCode className="w-8 h-8 text-slate-400 mx-auto mb-1" />
+                    <p className="text-xs font-bold text-slate-700">Your Document Wallet is Empty</p>
+                    <p className="text-[10px] text-slate-500 max-w-sm mx-auto mt-0.5">
+                      Save required documents directly from any service or certificate resolver tool to access them instantly during office visits.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
+                    {walletDocs.map((doc, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white border border-stone-200 rounded-xl p-3 flex items-center justify-between gap-2 shadow-2xs hover:border-emerald-500 transition"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <BookmarkCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <div className="min-w-0">
+                            <span className="text-xs font-extrabold text-slate-900 truncate block">{doc}</span>
+                            <span className="text-[9px] text-emerald-700 font-bold block">Verified for Panchayat</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="p-1 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition"
+                            title="Print / Export Document Copy"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleWalletDoc(doc)}
+                            className="text-[10px] font-extrabold text-rose-600 hover:text-rose-800 px-1.5 py-0.5 rounded hover:bg-rose-50 transition"
+                            title="Remove from wallet"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. DIRECTORY SETTINGS BLOCK */}
+              <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
               <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 space-y-4 shadow-2xs">
                 
                 {
@@ -2213,6 +2865,8 @@ Phone: ${service.phoneNumber}`;
 
               </div>
 
+              </div>
+
             </div>}
 
             </motion.div>
@@ -2354,6 +3008,8 @@ Phone: ${service.phoneNumber}`;
                       <p className="text-slate-700 leading-relaxed font-medium">{detailData.description}</p>
                     </div>
 
+                    <RequiredDocumentsAccordion service={selectedDetailService} language={activeDetailLang} defaultOpen={true} className="mt-2" />
+
                     {
       /* Direct Telephone Dialer Dial btn */
     }
@@ -2449,23 +3105,27 @@ Phone: ${service.phoneNumber}`;
         </AnimatePresence>
 
         <AnimatePresence>
-          {reportService && <>
-              <div className="absolute inset-0 bg-black/40 z-[60] backdrop-blur-xs" onClick={() => setReportService(null)} />
+          {reportService && (
+            <div
+              className="fixed inset-0 z-[60] overflow-y-auto bg-black/50 backdrop-blur-xs p-4 flex justify-center items-center min-h-screen my-0 cursor-pointer"
+              onClick={() => setReportService(null)}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="report-dialog-title"
+            >
               <motion.div
-    initial={{ opacity: 0, scale: 0.96, y: 12 }}
-    animate={{ opacity: 1, scale: 1, y: 0 }}
-    exit={{ opacity: 0, scale: 0.96, y: 12 }}
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="report-dialog-title"
-    className="absolute z-[61] left-4 right-4 top-24 md:left-1/2 md:right-auto md:w-[420px] md:-translate-x-1/2 bg-white border border-stone-200 rounded-2xl shadow-2xl p-4 text-slate-900"
-  >
+                initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md my-auto bg-white border border-stone-200 rounded-2xl shadow-2xl p-4 text-slate-900 cursor-default shrink-0"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 id="report-dialog-title" className="font-classical text-lg font-black text-slate-900">{ui.reportTitle}</h3>
                     <p className="text-xs text-slate-500 mt-1">{ui.reportHint}</p>
                   </div>
-                  <button type="button" aria-label="Close report dialog" onClick={() => setReportService(null)} className="p-1.5 bg-stone-100 border border-stone-200 rounded-lg text-slate-500 hover:text-slate-900">
+                  <button type="button" aria-label="Close report dialog" onClick={() => setReportService(null)} className="p-1.5 bg-stone-100 border border-stone-200 rounded-lg text-slate-500 hover:text-slate-900 transition cursor-pointer">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -2473,20 +3133,21 @@ Phone: ${service.phoneNumber}`;
                   {reportService.translations[language]?.title || reportService.translations.en.title}
                 </div>
                 <textarea
-    value={reportText}
-    onChange={(e) => setReportText(e.target.value)}
-    placeholder={ui.reportPlaceholder}
-    className="mt-3 w-full min-h-[110px] bg-white border border-stone-200 text-slate-900 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-600 resize-none"
-  />
+                  value={reportText}
+                  onChange={(e) => setReportText(e.target.value)}
+                  placeholder={ui.reportPlaceholder}
+                  className="mt-3 w-full min-h-[110px] bg-white border border-stone-200 text-slate-900 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-600 resize-none"
+                />
                 <button
-    onClick={submitReport}
-    disabled={!reportText.trim()}
-    className="mt-3 w-full bg-emerald-700 disabled:bg-stone-200 disabled:text-slate-400 hover:bg-emerald-800 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition"
-  >
+                  onClick={submitReport}
+                  disabled={!reportText.trim()}
+                  className="mt-3 w-full bg-emerald-700 disabled:bg-stone-200 disabled:text-slate-400 hover:bg-emerald-800 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition cursor-pointer"
+                >
                   {ui.submitReport}
                 </button>
               </motion.div>
-            </>}
+            </div>
+          )}
         </AnimatePresence>
 
         {
