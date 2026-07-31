@@ -1,4 +1,4 @@
-# 🌾 GramSeva (ഗ്രാമസേവ) — Kerala Village Services Directory
+# 🌾 GramSeva — Village Services Directory
 
 An offline-first, multilingual emergency and essential public services directory designed for local panchayats, villages, and towns across Kerala. Built with **React 19**, **Vite**, **Tailwind CSS**, and **Leaflet**, GramSeva connects rural citizens with vital government services, emergency helplines, Akshaya centers, Kudumbashree units, health centers, and public utilities.
 
