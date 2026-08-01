@@ -113,4 +113,8 @@ Contributions, issues, and feature requests are welcome! Feel free to check the 
 
 ---
 
+## Contributors
+
+Thanks to everyone who helps improve GramSeva through code, documentation, testing, and community feedback.
+
 
