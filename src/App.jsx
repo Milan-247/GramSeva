@@ -1468,12 +1468,12 @@ Phone: ${service.phoneNumber}`;
       {
     /* App frame */
   }
-      <div data-theme={currentTheme} className="directory-frame relative w-full max-w-[1600px] h-dvh min-h-[620px] bg-[#101214] lg:h-[calc(100vh-32px)] lg:my-4 lg:rounded-2xl lg:border lg:border-slate-300/70 lg:shadow-2xl flex flex-col overflow-hidden transition-all">
+      <div data-theme={currentTheme} className="directory-frame relative w-full max-w-[1600px] h-dvh min-h-[620px] bg-[#101214] lg:h-[calc(100dvh-32px)] lg:rounded-2xl lg:border lg:border-slate-300/70 lg:shadow-2xl flex flex-col overflow-hidden transition-all">
         
         {
     /* Dynamic Mobile Banner Header block */
   }
-        <header className="gram-header app-header text-white p-2.5 sm:p-5 lg:p-6 pt-2 sm:pt-6 pb-2.5 sm:pb-5 shrink-0 flex flex-col gap-1 sm:gap-2 relative">
+        <header className={`gram-header app-header ${currentTab === "services" || currentTab === "map" ? "has-directory-controls" : "is-compact"} text-white p-2.5 sm:p-5 lg:p-6 pt-2 sm:pt-6 pb-2.5 sm:pb-5 shrink-0 flex flex-col gap-1 sm:gap-2 relative`}>
           
 
 
@@ -1482,11 +1482,11 @@ Phone: ${service.phoneNumber}`;
   }
           <div className="brand-language-row flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 mt-0.5 sm:mt-1">
             <div className="brand-identity-row flex items-center gap-2.5 sm:gap-3.5 min-w-0 w-full sm:w-auto">
-              <div className="bg-white p-1.5 sm:p-2 rounded-2xl shadow-md border border-emerald-200/80 shrink-0">
-                <img src={graamsevaLogo} alt="GraamSeva Logo" className="h-9 sm:h-12 w-auto object-contain" />
+              <div className="brand-logo bg-white p-1.5 sm:p-2 rounded-2xl shadow-md border border-emerald-200/80 shrink-0">
+                <img src={graamsevaLogo} alt="GraamSeva Logo" className="brand-logo-image h-9 sm:h-12 w-auto object-contain" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="header-title font-classical text-base sm:text-3xl lg:text-4xl font-black text-white tracking-tight truncate leading-tight drop-shadow-sm">
+                <h2 className="header-title font-classical text-base sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-sm">
                   {selectedLocality === "all"
                     ? selectedDistrict === "all" ? "Kerala Service Directory" : `${selectedDistrict} Directory`
                     : selectedLocality === "Azhiyur" || selectedLocality.toLowerCase().includes("panchayat")
@@ -1512,6 +1512,7 @@ Phone: ${service.phoneNumber}`;
             </p>
           </div>
 
+          {(currentTab === "services" || currentTab === "map") && <>
           {
     /* Primary search & Location filter row */
   }
@@ -1627,8 +1628,8 @@ Phone: ${service.phoneNumber}`;
             </div>
 
             {/* District & Locality Selectors */}
-            <div className="flex items-center gap-1.5 shrink-0 w-full md:w-auto overflow-x-auto scrollbar-none py-0.5">
-              <div className="flex items-center gap-1 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0">
+            <div className="location-selectors flex items-center gap-1.5 shrink-0 w-full md:w-auto overflow-x-auto scrollbar-none py-0.5">
+              <div className="location-select flex items-center gap-1 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0">
                 <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <select
                   value={selectedDistrict}
@@ -1656,7 +1657,7 @@ Phone: ${service.phoneNumber}`;
                 </select>
               </div>
 
-              <div className="flex items-center gap-1 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0">
+              <div className="location-select flex items-center gap-1 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0">
                 <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <select
                   value={selectedLocality}
@@ -1716,6 +1717,7 @@ Phone: ${service.phoneNumber}`;
               </button>
             ))}
           </div>
+          </>}
 
         </header>
 
@@ -1786,6 +1788,15 @@ Phone: ${service.phoneNumber}`;
                     className="rail-action shrink-0"
                   >
                     Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigateToTab("map")}
+                    className="view-mode-rail rail-action hidden sm:flex items-center gap-1 shrink-0"
+                    aria-label="Switch to map view"
+                  >
+                    <MapIcon className="w-3.5 h-3.5" />
+                    <span>Map view</span>
                   </button>
                 </div>
               </div>
@@ -3203,7 +3214,7 @@ Phone: ${service.phoneNumber}`;
             whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
             onClick={() => navigateToTab(currentTab === "services" ? "map" : "services")}
             aria-label={currentTab === "services" ? "Switch to map view" : "Switch to list view"}
-            className="view-toggle-button fixed sm:absolute bottom-16 sm:bottom-18 right-4 sm:right-6 z-40 bg-emerald-800 hover:bg-emerald-900 text-white font-black px-4 py-2.5 rounded-full shadow-xl hover:shadow-2xl border border-emerald-600/50 flex items-center gap-2 text-xs uppercase tracking-wider backdrop-blur-md cursor-pointer transition-colors active:scale-95"
+            className={`view-toggle-button ${currentTab === "services" ? "is-list-view" : "is-map-view"} fixed sm:absolute bottom-16 sm:bottom-18 right-4 sm:right-6 z-40 bg-emerald-800 hover:bg-emerald-900 text-white font-black px-4 py-2.5 rounded-full shadow-xl hover:shadow-2xl border border-emerald-600/50 flex items-center gap-2 text-xs uppercase tracking-wider backdrop-blur-md cursor-pointer transition-colors active:scale-95`}
           >
             {currentTab === "services" ? (
               <>
