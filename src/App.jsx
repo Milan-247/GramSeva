@@ -1480,8 +1480,8 @@ Phone: ${service.phoneNumber}`;
           {
     /* Panchayat Branding */
   }
-          <div className="flex flex-row items-center justify-between gap-3 mt-0.5 sm:mt-1">
-            <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+          <div className="brand-language-row flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 mt-0.5 sm:mt-1">
+            <div className="brand-identity-row flex items-center gap-2.5 sm:gap-3.5 min-w-0 w-full sm:w-auto">
               <div className="bg-white p-1.5 sm:p-2 rounded-2xl shadow-md border border-emerald-200/80 shrink-0">
                 <img src={graamsevaLogo} alt="GraamSeva Logo" className="h-9 sm:h-12 w-auto object-contain" />
               </div>
@@ -1499,7 +1499,7 @@ Phone: ${service.phoneNumber}`;
             {
     /* Horizontal Scroll Wheel Language Selector */
   }
-            <div className="shrink-0 max-w-[140px] sm:max-w-[320px]">
+            <div className="language-wheel-shell shrink-0 w-full sm:w-auto sm:max-w-[320px]">
               <LanguageWheel compact={true} />
             </div>
           </div>
@@ -1541,6 +1541,7 @@ Phone: ${service.phoneNumber}`;
                 <button
                   type="button"
                   onClick={handleVoiceSearch}
+                  aria-label={isListening ? "Stop voice search" : "Start voice search"}
                   className={`p-1.5 mr-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
                     isListening
                       ? "bg-rose-500 text-white animate-pulse"
@@ -1569,10 +1570,13 @@ Phone: ${service.phoneNumber}`;
                         <div className="px-2 pb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">{ui.searchSuggestions}</div>
                         {searchSuggestions.map((item) => (
                           <button
+                            type="button"
                             key={item.id}
-                            onMouseDown={() => {
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
                               setSearchQuery(item.label);
                               saveRecentSearch(item.label);
+                              setIsSearchFocused(false);
                             }}
                             className="w-full text-left px-3 py-2 rounded-xl hover:bg-emerald-50 transition flex items-center justify-between gap-3 cursor-pointer"
                           >
@@ -1590,7 +1594,9 @@ Phone: ${service.phoneNumber}`;
                             <History className="w-3 h-3 text-emerald-600" /> Recent Searches
                           </span>
                           <button
-                            onMouseDown={clearRecentSearches}
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={clearRecentSearches}
                             className="text-[9px] font-bold text-slate-400 hover:text-rose-600 cursor-pointer"
                           >
                             Clear History
@@ -1599,9 +1605,13 @@ Phone: ${service.phoneNumber}`;
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {recentSearches.map((term, idx) => (
                             <button
+                              type="button"
                               key={idx}
-                              onMouseDown={() => {
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
                                 setSearchQuery(term);
+                                saveRecentSearch(term);
+                                setIsSearchFocused(false);
                               }}
                               className="bg-stone-100 hover:bg-emerald-100 text-slate-800 hover:text-emerald-950 border border-stone-200 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                             >
@@ -1682,7 +1692,7 @@ Phone: ${service.phoneNumber}`;
           </div>
 
           {/* QOL #5: Popular Quick Topic Chips for Villagers */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1.5 pb-0.5 text-[11px] font-bold">
+          <div className="popular-topics flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1.5 pb-0.5 text-[11px] font-bold">
             <span className="text-[10px] uppercase font-black text-emerald-200/80 shrink-0">Popular:</span>
             {[
               { label: "🌾 Farmer Schemes", query: "Krishi Bhavan" },
@@ -1730,8 +1740,8 @@ Phone: ${service.phoneNumber}`;
               {
     /* Category Horizontal Filter Row */
   }
-              <div className="category-strip flex items-center justify-between overflow-x-auto gap-2 px-3 sm:px-5 lg:px-6 py-1.5 border-b border-zinc-800/80 scrollbar-none shrink-0 select-none sticky top-0 z-20" role="toolbar" aria-label="Filter services by category">
-                <div className="flex items-center gap-1.5 shrink-0">
+              <div className="category-strip flex items-center justify-between gap-2 px-3 sm:px-5 lg:px-6 py-1.5 border-b border-zinc-800/80 shrink-0 select-none sticky top-0 z-20" role="toolbar" aria-label="Filter and arrange services">
+                <div className="category-filter-scroll flex items-center gap-1.5 min-w-0 overflow-x-auto scrollbar-none">
                   <div className="flex items-center gap-1 shrink-0 pr-1.5 border-r border-zinc-700/60 mr-0.5 text-emerald-400 font-extrabold text-[10px] uppercase tracking-wider">
                     <Filter className="w-3 h-3" />
                     <span className="hidden xs:inline">Category</span>
@@ -1753,7 +1763,7 @@ Phone: ${service.phoneNumber}`;
                   })}
                 </div>
 
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pl-2 border-l border-zinc-300/80 dark:border-zinc-700/60 ml-auto">
+                <div className="directory-view-actions flex items-center gap-1.5 sm:gap-2 shrink-0 pl-2 border-l border-zinc-300/80 dark:border-zinc-700/60 ml-auto">
                   <button
                     type="button"
                     onClick={() => setGroupByPlace((value) => !value)}
@@ -1783,7 +1793,7 @@ Phone: ${service.phoneNumber}`;
               {
     /* Dynamic scrollable directory area */
   }
-              <div id="service-results" className="service-observatory flex-1 overflow-y-auto px-5 sm:px-6 lg:px-8 pt-2 sm:pt-3 pb-24 scrollbar-none" tabIndex={-1}>
+              <div id="service-results" className={`service-observatory ${groupByPlace ? "is-grouped" : "is-flat"} flex-1 overflow-y-auto px-5 sm:px-6 lg:px-8 pt-2 sm:pt-3 pb-24 scrollbar-none`} tabIndex={-1}>
                 {isUiPending ? (
                   <DirectorySkeleton />
                 ) : (
@@ -1812,7 +1822,7 @@ Phone: ${service.phoneNumber}`;
                                       <h4 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
                                         <span>{group.localityName}</span>
                                         <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
-                                          {group.services.length} {group.services.length === 1 ? "person / service" : "people / services"}
+                                          {group.services.length} {group.services.length === 1 ? "service" : "services"}
                                         </span>
                                       </h4>
                                       <p className="text-[10px] text-slate-500 font-medium">
@@ -1826,6 +1836,7 @@ Phone: ${service.phoneNumber}`;
                                     onClick={() => togglePlaceCollapse(group.localityName)}
                                     className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1 text-xs font-semibold"
                                     aria-label={`Toggle ${group.localityName}`}
+                                    aria-expanded={!isCollapsed}
                                   >
                                     <span className="text-[10px] hidden sm:inline">{isCollapsed ? "Expand" : "Collapse"}</span>
                                     {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
@@ -1868,7 +1879,19 @@ Phone: ${service.phoneNumber}`;
                                         >
                                           {primary.isEmergency && <div className="absolute top-0 bottom-0 left-0 w-1 bg-rose-500 rounded-l-xl" />}
 
-                                          <div className="flex flex-row gap-3 sm:gap-4 cursor-pointer" onClick={() => setSelectedDetailService(primary)}>
+                                          <div
+                                            className="service-card-primary flex flex-row gap-3 sm:gap-4 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-label={`Open details for ${displayTitle}`}
+                                            onClick={() => setSelectedDetailService(primary)}
+                                            onKeyDown={(event) => {
+                                              if (event.key === "Enter" || event.key === " ") {
+                                                event.preventDefault();
+                                                setSelectedDetailService(primary);
+                                              }
+                                            }}
+                                          >
                                             <div className={`icon-tile w-12 h-12 lg:w-13 lg:h-13 flex items-center justify-center shrink-0 rounded-2xl ${getCategoryColor(primary.categoryKey)}`}>
                                               {getCustomizedIcon(primary)}
                                             </div>
@@ -2016,7 +2039,19 @@ Phone: ${service.phoneNumber}`;
                                 >
                                   {primary.isEmergency && <div className="absolute top-0 bottom-0 left-0 w-1 bg-rose-500 rounded-l-xl" />}
 
-                                  <div className="flex flex-row gap-3 sm:gap-4 cursor-pointer" onClick={() => setSelectedDetailService(primary)}>
+                                  <div
+                                    className="service-card-primary flex flex-row gap-3 sm:gap-4 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`Open details for ${displayTitle}`}
+                                    onClick={() => setSelectedDetailService(primary)}
+                                    onKeyDown={(event) => {
+                                      if (event.key === "Enter" || event.key === " ") {
+                                        event.preventDefault();
+                                        setSelectedDetailService(primary);
+                                      }
+                                    }}
+                                  >
                                     <div className={`icon-tile w-12 h-12 lg:w-13 lg:h-13 flex items-center justify-center shrink-0 rounded-2xl ${getCategoryColor(primary.categoryKey)}`}>
                                       {getCustomizedIcon(primary)}
                                     </div>
@@ -3168,17 +3203,17 @@ Phone: ${service.phoneNumber}`;
             whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
             onClick={() => navigateToTab(currentTab === "services" ? "map" : "services")}
             aria-label={currentTab === "services" ? "Switch to map view" : "Switch to list view"}
-            className="fixed sm:absolute bottom-16 sm:bottom-18 right-4 sm:right-6 z-40 bg-emerald-800 hover:bg-emerald-900 text-white font-black px-4 py-2.5 rounded-full shadow-xl hover:shadow-2xl border border-emerald-600/50 flex items-center gap-2 text-xs uppercase tracking-wider backdrop-blur-md cursor-pointer transition-colors active:scale-95"
+            className="view-toggle-button fixed sm:absolute bottom-16 sm:bottom-18 right-4 sm:right-6 z-40 bg-emerald-800 hover:bg-emerald-900 text-white font-black px-4 py-2.5 rounded-full shadow-xl hover:shadow-2xl border border-emerald-600/50 flex items-center gap-2 text-xs uppercase tracking-wider backdrop-blur-md cursor-pointer transition-colors active:scale-95"
           >
             {currentTab === "services" ? (
               <>
                 <MapIcon className="w-4 h-4 text-emerald-300" />
-                <span>Map View</span>
+                <span className="view-toggle-label">Map View</span>
               </>
             ) : (
               <>
                 <List className="w-4 h-4 text-emerald-300" />
-                <span>List View</span>
+                <span className="view-toggle-label">List View</span>
               </>
             )}
           </motion.button>
