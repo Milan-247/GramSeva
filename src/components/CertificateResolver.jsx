@@ -79,9 +79,9 @@ const RESOLVER_TRANSLATIONS = {
     printPlan: "പ്ലാൻ പ്രിന്റ് ചെയ്യുക / PDF"
   },
   en: {
-    title: "Sarkari Certificate Guide & Easy Travel Plan",
-    badge: "Zero-Wasted-Trips Assistant for Villagers",
-    subtitle: "Select the certificates you need to make (e.g. Income, Caste) and the ID cards you already have (e.g. Aadhaar, Ration Card). We show you which government office to visit first, exact required papers, official government fees (e.g. ₹30), and how to avoid repeated trips.",
+    title: "Certificate Guide & Office Visit Plan",
+    badge: "Plan once. Avoid repeat office visits.",
+    subtitle: "Choose the certificates you need and the documents you already have. Get the correct office order, required papers, expected fees, and processing time.",
     selectState: "Select Your State & Service Center Rules:",
     goal: "Your Main Priority:",
     fewestVisits: "🏛️ Minimum Office Trips (Avoid Repeated Visits to Town/Tehsil)",
@@ -190,6 +190,14 @@ const RESOLVER_TRANSLATIONS = {
     copiedRoute: "ಅರ್ಜಿ ಯೋಜನೆ ಪ್ರತಿಯನ್ನು ನಕಲಿಸಲಾಗಿದೆ!",
     printPlan: "ಪ್ರಿಂಟ್ ಮಾಡಿ / PDF"
   }
+};
+
+const RESOLVER_STEP_LABELS = {
+  en: { intake: "Certificates & IDs", plan: "Office Visit Plan", graph: "Certificate Map", ocr: "Name Check" },
+  ml: { intake: "സർട്ടിഫിക്കറ്റുകളും ഐഡികളും", plan: "ഓഫീസ് സന്ദർശന പ്ലാൻ", graph: "സർട്ടിഫിക്കറ്റ് മാപ്പ്", ocr: "പേര് പരിശോധന" },
+  hi: { intake: "प्रमाणपत्र और आईडी", plan: "कार्यालय यात्रा योजना", graph: "प्रमाणपत्र मानचित्र", ocr: "नाम जांच" },
+  te: { intake: "సర్టిఫికెట్లు & ఐడీలు", plan: "ఆఫీస్ విజిట్ ప్లాన్", graph: "సర్టిఫికేట్ మ్యాప్", ocr: "పేరు తనిఖీ" },
+  kn: { intake: "ಪ್ರಮಾಣಪತ್ರ & ಐಡಿಗಳು", plan: "ಕಚೇರಿ ಭೇಟಿ ಯೋಜನೆ", graph: "ಪ್ರಮಾಣಪತ್ರ ನಕ್ಷೆ", ocr: "ಹೆಸರು ಪರಿಶೀಲನೆ" }
 };
 
 export default function CertificateResolver({
@@ -457,50 +465,47 @@ export default function CertificateResolver({
   }, [selectedCertForModal, selectedState]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-white text-slate-900 overflow-y-auto scrollbar-none pb-24">
+    <div className="certificate-resolver flex-1 flex flex-col min-h-0 bg-slate-50 text-slate-900 overflow-y-auto scrollbar-none pb-24">
       {/* Top Banner / Hero Controls */}
-      <div className="bg-gradient-to-r from-emerald-900 via-slate-900 to-teal-950 text-white p-4 sm:p-6 lg:p-8 border-b border-emerald-800/50 shadow-md print:bg-white print:text-black">
-        <div className="max-w-6xl mx-auto space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
+      <div className="resolver-hero text-white p-4 sm:p-6 lg:p-8 border-b border-emerald-800/50 print:bg-white print:text-black">
+        <div className="max-w-7xl mx-auto">
+          <div className="resolver-hero-layout grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] lg:items-center">
+            <div className="resolver-hero-copy min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
                   <GitFork className="w-3 h-3" /> {t.badge}
                 </span>
-                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                  Joint Dependency Engine
-                </span>
               </div>
-              <h2 className="font-classical text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight mt-1 print:text-slate-900">
+              <h2 className="font-classical text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight mt-2 leading-tight print:text-slate-900">
                 {t.title}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-3xl mt-1 leading-relaxed print:text-slate-600">
+              <p className="text-sm text-emerald-50/85 max-w-2xl mt-2 leading-relaxed print:text-slate-600">
                 {t.subtitle}
               </p>
             </div>
 
             {/* State & Panchayat Location Selector */}
-            <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 shrink-0 space-y-2.5 print:hidden min-w-[280px]">
+            <div className="resolver-location-panel w-full min-w-0 p-4 rounded-2xl border border-white/15 space-y-3 print:hidden">
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-300 block mb-1">
+                <label className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-50/75 block mb-1.5">
                   {t.selectState}
                 </label>
                 <select
                   value={selectedState}
                   onChange={(e) => setSelectedState(e.target.value)}
-                  className="w-full bg-slate-900 border border-emerald-500/40 text-white font-bold rounded-xl px-3 py-1.5 text-xs outline-none focus:border-emerald-400 transition"
+                  className="resolver-select w-full min-w-0 bg-slate-950 border border-emerald-400/40 text-white font-bold rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-400/25 transition"
                 >
-                  <option value="kerala">🌴 Kerala — Akshaya Center & Grama Panchayat{language === "ml" ? " (അക്ഷയ കേന്ദ്രം)" : ""}</option>
+                  <option value="kerala">🌴 Kerala — Akshaya & Panchayat{language === "ml" ? " (അക്ഷയ കേന്ദ്രം)" : ""}</option>
                   <option value="karnataka">🏰 Karnataka — Nada Kacheri & Grama One (ನಾಡ ಕಚೇರಿ)</option>
-                  <option value="tamilnadu">🏛️ Tamil Nadu — e-Sevai Center & Taluk Office{language === "ta" ? " (இ-சேவை)" : ""}</option>
-                  <option value="pan_india">🌾 Other Indian States — Tehsil & Jan Seva Kendra{language === "hi" ? " (तहसील / जन सेवा केंद्र)" : ""}</option>
+                  <option value="tamilnadu">🏛️ Tamil Nadu — e-Sevai & Taluk Office{language === "ta" ? " (இ-சேவை)" : ""}</option>
+                  <option value="pan_india">🌾 Other States — Tehsil & Jan Seva Kendra{language === "hi" ? " (तहसील / जन सेवा केंद्र)" : ""}</option>
                 </select>
               </div>
 
               {selectedState === "kerala" && (
-                <div className="pt-2 border-t border-white/10 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1">
+                <div className="resolver-kerala-fields pt-3 border-t border-white/10">
+                  <div className="resolver-kerala-heading flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-200 flex items-center gap-1">
                       <MapPin className="w-3 h-3 text-emerald-400" /> Select Grama Panchayat (Kerala)
                     </span>
                     <span className="text-[9px] bg-emerald-500/20 text-emerald-200 px-1.5 py-0.5 rounded font-mono font-bold">
@@ -510,7 +515,7 @@ export default function CertificateResolver({
 
                   {/* District Dropdown */}
                   <div>
-                    <label className="text-[9px] font-bold text-slate-300 block mb-0.5">District (14 Districts):</label>
+                    <label className="text-[10px] font-bold text-emerald-50/70 block mb-1">District (14 Districts):</label>
                     <select
                       value={selectedDistrictName}
                       onChange={(e) => {
@@ -520,11 +525,11 @@ export default function CertificateResolver({
                         setSelectedPanchayatName(firstP);
                         if (onSelectPanchayat) onSelectPanchayat(newDist, firstP);
                       }}
-                      className="w-full bg-slate-950 border border-emerald-500/30 text-white font-bold rounded-lg px-2.5 py-1 text-xs outline-none"
+                      className="resolver-select w-full min-w-0 bg-slate-950 border border-emerald-400/30 text-white font-bold rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-400/25"
                     >
                       {KERALA_DISTRICTS_LIST.map((dist) => (
                         <option key={dist.id} value={dist.en}>
-                          {dist.en} ({dist.ml}) &middot; {dist.totalPanchayats} Panchayats
+                          {currentLang === "ml" ? `${dist.ml} (${dist.en})` : dist.en} &middot; {dist.totalPanchayats} Panchayats
                         </option>
                       ))}
                     </select>
@@ -532,7 +537,7 @@ export default function CertificateResolver({
 
                   {/* Panchayat Dropdown */}
                   <div>
-                    <label className="text-[9px] font-bold text-slate-300 block mb-0.5">Grama Panchayat:</label>
+                    <label className="text-[10px] font-bold text-emerald-50/70 block mb-1">Grama Panchayat:</label>
                     <select
                       value={selectedPanchayatName}
                       onChange={(e) => {
@@ -540,11 +545,11 @@ export default function CertificateResolver({
                         setSelectedPanchayatName(pName);
                         if (onSelectPanchayat) onSelectPanchayat(selectedDistrictName, pName);
                       }}
-                      className="w-full bg-slate-950 border border-emerald-500/30 text-emerald-300 font-extrabold rounded-lg px-2.5 py-1 text-xs outline-none"
+                      className="resolver-select w-full min-w-0 bg-slate-950 border border-emerald-400/30 text-emerald-200 font-extrabold rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-400/25"
                     >
                       {(KERALA_PANCHAYATS_BY_DISTRICT[selectedDistrictName] || []).map((p) => (
                         <option key={p.en} value={p.en}>
-                          {p.en} ({p.ml})
+                          {currentLang === "ml" ? `${p.ml} (${p.en})` : p.en}
                         </option>
                       ))}
                     </select>
@@ -552,7 +557,7 @@ export default function CertificateResolver({
                 </div>
               )}
 
-              <span className="text-[9px] text-emerald-300 block font-medium">
+              <span className="text-[10px] text-emerald-200/80 block font-semibold">
                 {currentState.portalName}
               </span>
             </div>
@@ -561,30 +566,39 @@ export default function CertificateResolver({
       </div>
 
       {/* Main Container Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full">
+      <div className="resolver-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 w-full">
         {/* Navigation Sub-Tabs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 border-b border-stone-200 pb-3 mb-4 select-none print:hidden">
+        <div className="resolver-tabs grid grid-cols-2 lg:grid-cols-4 gap-2 border-b border-slate-200 pb-3 mb-4 select-none print:hidden" role="tablist" aria-label="Certificate planning steps">
           {[
             { id: "intake", label: t.tabIntake, icon: <CheckCircle2 className="w-4 h-4 shrink-0" />, count: targetIds.length },
             { id: "plan", label: t.tabPlan, icon: <Zap className="w-4 h-4 shrink-0" />, highlight: solverResult.savedVisits > 0 },
             { id: "graph", label: t.tabGraph, icon: <GitFork className="w-4 h-4 shrink-0" /> },
             { id: "ocr", label: t.tabOcr, icon: <Camera className="w-4 h-4 shrink-0" />, badge: mismatchReport.hasMismatches ? "Mismatch" : null }
-          ].map((tab) => {
+          ].map((tab, tabIndex) => {
             const isActive = activeSubTab === tab.id;
+            const tabLabel = RESOLVER_STEP_LABELS[currentLang]?.[tab.id] || tab.label.split(" ").slice(2).join(" ") || tab.label;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`flex items-center justify-center sm:justify-start gap-2 px-3 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer border text-left w-full h-full min-w-0 ${
+                role="tab"
+                aria-selected={isActive}
+                title={tab.label}
+                className={`resolver-tab flex items-center justify-start gap-2.5 px-3 py-3 rounded-xl text-xs font-bold transition cursor-pointer border text-left w-full min-h-[58px] min-w-0 ${
                   isActive
-                    ? "bg-emerald-700 text-white border-emerald-800 shadow-sm font-black"
-                    : "bg-stone-100 hover:bg-stone-200 text-slate-700 border-stone-200"
+                    ? "is-active bg-emerald-50 text-emerald-950 border-emerald-600 shadow-sm font-black"
+                    : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200"
                 }`}
               >
-                {tab.icon}
-                <span className="truncate">{tab.label}</span>
+                <span className={`resolver-tab-icon w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isActive ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-600"}`}>
+                  {tab.icon}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-[9px] uppercase tracking-wider mb-0.5 ${isActive ? "text-emerald-700" : "text-slate-400"}`}>Step {tabIndex + 1}</span>
+                  <span className="resolver-tab-label block whitespace-normal leading-snug">{tabLabel}</span>
+                </span>
                 {tab.count !== undefined && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] shrink-0 ${isActive ? "bg-emerald-900 text-white" : "bg-stone-300 text-slate-800"}`}>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] shrink-0 ${isActive ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-700"}`}>
                     {tab.count}
                   </span>
                 )}
@@ -850,59 +864,64 @@ export default function CertificateResolver({
 
         {/* SUB-TAB 2: OPTIMAL PLAN (AO* SOLUTION) */}
         {activeSubTab === "plan" && (
-          <div className="space-y-6 animate-fade-in">
+          <div className="space-y-5 animate-fade-in">
             {/* Explanatory Roadmap Banner */}
-            <div className="bg-emerald-950 text-white rounded-2xl p-4 sm:p-5 shadow-xs border border-emerald-800/80 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-widest border border-emerald-400/30">
-                  Your Personal Office Visit Roadmap
-                </span>
+            <div className="resolver-plan-intro bg-emerald-950 text-white rounded-2xl p-4 sm:p-5 shadow-xs border border-emerald-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-700 border border-emerald-500/60 flex items-center justify-center shrink-0">
+                  <MapPin className="w-5 h-5 text-emerald-100" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Your office visit sequence</span>
+                  <h3 className="text-sm sm:text-base font-black text-white mt-0.5">
+                    Complete each application in the right order
+                  </h3>
+                  <p className="text-xs text-emerald-100/85 leading-relaxed max-w-3xl mt-1">
+                    Finish local Panchayat documents first, then move to the next authority. Shared documents are reused across every selected certificate.
+                  </p>
+                </div>
               </div>
-              <h3 className="text-sm sm:text-base font-black text-white">
-                Follow this visit sequence to complete your applications without extra trips
-              </h3>
-              <p className="text-xs text-emerald-100/90 leading-relaxed max-w-3xl">
-                This plan shows you the exact order of government offices to visit (for example, getting local Village/Panchayat papers first before visiting the Tehsildar). Common documents (like Aadhaar Card & Ration Card) are automatically reused across all your target certificates so you never apply for the same paper twice!
-              </p>
+              <button type="button" onClick={() => setActiveSubTab("intake")} className="shrink-0 self-end sm:self-auto px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-extrabold text-white transition cursor-pointer flex items-center gap-1.5">
+                Edit documents <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Plan Metrics Summary Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-emerald-950 text-white p-3.5 rounded-2xl border border-emerald-800 shadow-2xs">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300/80 block">Total Office Visits</span>
-                <span className="text-xl font-black text-white block mt-0.5">{solverResult.totalVisits} Visit(s)</span>
-                {solverResult.savedVisits > 0 && (
-                  <span className="text-[10px] font-bold text-emerald-400 block mt-0.5">
-                     Saved {solverResult.savedVisits} visit(s)
-                  </span>
-                )}
+            <div className="resolver-metrics grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="resolver-metric-card bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex items-start gap-3">
+                <span className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0"><Building2 className="w-4 h-4" /></span>
+                <div className="min-w-0">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 block">Office visits</span>
+                  <span className="text-lg font-black text-slate-950 block leading-tight mt-0.5">{solverResult.totalVisits}</span>
+                  {solverResult.savedVisits > 0 && <span className="text-[10px] font-bold text-emerald-700 block mt-0.5">{solverResult.savedVisits} visit(s) saved</span>}
+                </div>
               </div>
 
-              <div className="bg-slate-900 text-white p-3.5 rounded-2xl border border-slate-800 shadow-2xs">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Estimated Processing</span>
-                <span className="text-xl font-black text-white block mt-0.5">~{solverResult.totalDays} Days</span>
-                <span className="text-[10px] font-medium text-slate-400 block mt-0.5">e-District timeline</span>
+              <div className="resolver-metric-card bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex items-start gap-3">
+                <span className="w-9 h-9 rounded-lg bg-sky-100 text-sky-800 flex items-center justify-center shrink-0"><Clock className="w-4 h-4" /></span>
+                <div className="min-w-0">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 block">Processing time</span>
+                  <span className="text-lg font-black text-slate-950 block leading-tight mt-0.5">~{solverResult.totalDays} days</span>
+                  <span className="text-[10px] font-medium text-slate-500 block mt-0.5">Expected timeline</span>
+                </div>
               </div>
 
-              <div className="bg-amber-950 text-white p-3.5 rounded-2xl border border-amber-800 shadow-2xs">
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-300/80 block">Total Government Fees</span>
-                <span className="text-xl font-black text-amber-200 block mt-0.5">₹{solverResult.totalFee}</span>
-                {solverResult.savedFees > 0 && (
-                  <span className="text-[10px] font-bold text-amber-300 block mt-0.5">
-                     Saved ₹{solverResult.savedFees} in fees
-                  </span>
-                )}
+              <div className="resolver-metric-card bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex items-start gap-3">
+                <span className="w-9 h-9 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0"><Banknote className="w-4 h-4" /></span>
+                <div className="min-w-0">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 block">Government fees</span>
+                  <span className="text-lg font-black text-slate-950 block leading-tight mt-0.5">₹{solverResult.totalFee}</span>
+                  {solverResult.savedFees > 0 && <span className="text-[10px] font-bold text-amber-700 block mt-0.5">₹{solverResult.savedFees} saved</span>}
+                </div>
               </div>
 
-              <div className="bg-stone-100 text-slate-900 p-3.5 rounded-2xl border border-stone-200 shadow-2xs">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Target Goals</span>
-                <span className="text-xl font-black text-slate-900 block mt-0.5">{targetIds.length} Cert(s)</span>
-                <button
-                  onClick={() => setActiveSubTab("intake")}
-                  className="text-[10px] font-bold text-emerald-800 hover:underline block mt-0.5 cursor-pointer"
-                >
-                  Edit target selection
-                </button>
+              <div className="resolver-metric-card bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex items-start gap-3">
+                <span className="w-9 h-9 rounded-lg bg-violet-100 text-violet-800 flex items-center justify-center shrink-0"><FileCheck2 className="w-4 h-4" /></span>
+                <div className="min-w-0">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 block">Certificates</span>
+                  <span className="text-lg font-black text-slate-950 block leading-tight mt-0.5">{targetIds.length}</span>
+                  <button onClick={() => setActiveSubTab("intake")} className="text-[10px] font-bold text-emerald-700 hover:underline block mt-0.5 cursor-pointer">Edit selection</button>
+                </div>
               </div>
             </div>
 
