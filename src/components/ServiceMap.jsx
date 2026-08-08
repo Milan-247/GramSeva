@@ -6,6 +6,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { Search, MapPin, Phone, Clock, Siren, Info } from "lucide-react";
 
 const DISTRICT_COORDINATES = {
+  // Kerala Districts
   Thiruvananthapuram: [8.5241, 76.9500],
   Kollam: [8.8932, 76.6350],
   Pathanamthitta: [9.2648, 76.7870],
@@ -19,7 +20,40 @@ const DISTRICT_COORDINATES = {
   Kozhikode: [11.2588, 75.7950],
   Wayanad: [11.6854, 76.1320],
   Kannur: [11.8745, 75.3950],
-  Kasaragod: [12.5100, 75.0000]
+  Kasaragod: [12.5100, 75.0000],
+
+  // Karnataka Districts (31)
+  Bagalkot: [16.1853, 75.6961],
+  Ballari: [15.1394, 76.9214],
+  Belagavi: [15.8497, 74.4977],
+  "Bengaluru Rural": [13.2500, 77.7167],
+  "Bengaluru South": [12.6500, 77.4500],
+  "Bengaluru Urban": [12.9716, 77.5946],
+  Bidar: [17.9104, 77.5199],
+  Chamarajanagar: [11.9261, 76.9437],
+  Chikkaballapur: [13.4355, 77.7315],
+  Chikkamagaluru: [13.3161, 75.7720],
+  Chitradurga: [14.2251, 76.3980],
+  "Dakshina Kannada": [12.8702, 74.8806],
+  Davangere: [14.4644, 75.9218],
+  Dharwad: [15.4589, 75.0078],
+  Gadag: [15.4319, 75.6355],
+  Hassan: [13.0072, 76.0962],
+  Haveri: [14.7953, 75.4022],
+  Kalaburagi: [17.3297, 76.8343],
+  Kodagu: [12.4244, 75.7382],
+  Kolar: [13.1367, 78.1292],
+  Koppal: [15.3517, 76.1544],
+  Mandya: [12.5218, 76.8951],
+  Mysuru: [12.2958, 76.6394],
+  Raichur: [16.2076, 77.3463],
+  Shivamogga: [13.9299, 75.5681],
+  Tumakuru: [13.3379, 77.1173],
+  Udupi: [13.3409, 74.7421],
+  "Uttara Kannada": [14.8185, 74.1416],
+  Vijayanagara: [15.2689, 76.3909],
+  Vijayapura: [16.8302, 75.7100],
+  Yadgir: [16.7700, 77.1378]
 };
 
 const LOCALITY_COORDINATES = {
@@ -180,7 +214,123 @@ const LOCALITY_COORDINATES = {
   Trikaripur: [12.1500, 75.1600],
   Kumbla: [12.5833, 74.9680],
   Badiyadka: [12.5833, 75.0667],
-  Cheruvathur: [12.2167, 75.1667]
+  Cheruvathur: [12.2167, 75.1667],
+
+  // KARNATAKA LOCALITIES & GRAMA PANCHAYATS
+
+  // Dakshina Kannada
+  Mangaluru: [12.9141, 74.8560],
+  Bantval: [12.8963, 75.0347],
+  Beltangadi: [12.9904, 75.2974],
+  Kadaba: [12.8130, 75.4180],
+  Moodbidri: [13.0694, 74.9961],
+  Puttur: [12.7667, 75.2000],
+  Sullia: [12.5583, 75.3889],
+  Ullal: [12.8068, 74.8504],
+  Gurupura: [12.9333, 74.9333],
+  Mulki: [13.0883, 74.7867],
+  Surathkal: [13.0031, 74.7972],
+  Kinnigoli: [13.0800, 74.8800],
+  Vitla: [12.7600, 75.1000],
+  Dharmasthala: [12.9531, 75.3800],
+  Subrahmanya: [12.6642, 75.6173],
+
+  // Udupi
+  Udupi: [13.3409, 74.7421],
+  Kundapura: [13.6288, 74.6908],
+  Karkala: [13.2167, 74.9961],
+  Kaup: [13.2300, 74.7400],
+  Brahmavar: [13.4300, 74.7500],
+  Baindur: [13.8667, 74.6333],
+  Hebri: [13.3833, 75.0167],
+  Saligrama: [13.5000, 74.7000],
+  Malpe: [13.3569, 74.7039],
+  Manipal: [13.3525, 74.7928],
+
+  // Mysuru
+  Mysuru: [12.2958, 76.6394],
+  Nanjangud: [12.1189, 76.6806],
+  Hunsur: [12.3083, 76.2894],
+  "T Narasipura": [12.2133, 76.9022],
+  Periyapatna: [12.3383, 76.0967],
+  "KR Nagara": [12.4417, 76.3828],
+  "HD Kote": [11.9833, 76.3333],
+  Sargur: [11.9800, 76.3800],
+
+  // Kodagu
+  Madikeri: [12.4244, 75.7382],
+  Somwarpet: [12.5978, 75.8672],
+  Virajpet: [12.1969, 75.8033],
+  Kushalnagar: [12.4578, 75.9614],
+  Gonikoppa: [12.1833, 75.8833],
+  Ponnampet: [12.1500, 75.8500],
+
+  // Uttara Kannada
+  Karwar: [14.8185, 74.1416],
+  Ankola: [14.6653, 74.3053],
+  Bhatkal: [13.9808, 74.5706],
+  Dandeli: [15.2444, 74.6200],
+  Haliyal: [15.3333, 74.7500],
+  Honnavar: [14.2800, 74.4500],
+  Joida: [15.1500, 74.4800],
+  Kumta: [14.4258, 74.4172],
+  Mundgod: [14.9700, 75.0300],
+  Siddapur: [14.3400, 74.8800],
+  Sirsi: [14.6194, 74.8353],
+  Yellapur: [14.9667, 74.7167],
+
+  // Belagavi
+  Belagavi: [15.8497, 74.4977],
+  Gokak: [16.1667, 74.8333],
+  Chikodi: [16.4300, 74.5900],
+  Athni: [16.7300, 75.0600],
+  Khanapur: [15.6333, 74.5167],
+  Nippani: [16.4000, 74.3800],
+
+  // Bengaluru
+  Bengaluru: [12.9716, 77.5946],
+  Anekal: [12.7117, 77.6961],
+  Yelahanka: [13.1007, 77.5963],
+  Devanahalli: [13.2483, 77.7125],
+  Hoskote: [13.0722, 77.7981],
+  Nelamangala: [13.0983, 77.3931],
+  Dodballapur: [13.2953, 77.5408],
+  Ramanagara: [12.7206, 77.2797],
+  Channapatna: [12.6517, 77.2089],
+  Kanakapura: [12.5469, 77.4225],
+
+  // Kalaburagi, Bidar, Raichur, Ballari, Shivamogga
+  Kalaburagi: [17.3297, 76.8343],
+  Bidar: [17.9104, 77.5199],
+  Raichur: [16.2076, 77.3463],
+  Yadgir: [16.7700, 77.1378],
+  Ballari: [15.1394, 76.9214],
+  Hosapete: [15.2689, 76.3909],
+  Koppal: [15.3517, 76.1544],
+  Gadag: [15.4319, 75.6355],
+  Hubballi: [15.3647, 75.1240],
+  Dharwad: [15.4589, 75.0078],
+  Haveri: [14.7953, 75.4022],
+  Davangere: [14.4644, 75.9218],
+  Shivamogga: [13.9299, 75.5681],
+  Bhadravathi: [13.8400, 75.7000],
+  Sagar: [14.1667, 75.0333],
+  Shikaripura: [14.2700, 75.3500],
+  Thirthahalli: [13.7000, 75.2500],
+  Tumakuru: [13.3379, 77.1173],
+  Chitradurga: [14.2251, 76.3980],
+  Hassan: [13.0072, 76.0962],
+  Chikkamagaluru: [13.3161, 75.7720],
+  Sringeri: [13.4167, 75.2500],
+  Mudigere: [13.1333, 75.6000],
+  Mandya: [12.5218, 76.8951],
+  Srirangapatna: [12.4231, 76.6828],
+  Chamarajanagar: [11.9261, 76.9437],
+  Kollegala: [12.1500, 77.1167],
+  Kolar: [13.1367, 78.1292],
+  Chikkaballapur: [13.4355, 77.7315],
+  Bagalkot: [16.1853, 75.6961],
+  Vijayapura: [16.8302, 75.7100]
 };
 
 const CATEGORY_MAP_CONFIG = {
@@ -239,11 +389,11 @@ function getServiceCoordinates(service) {
     return [Number(service.lat), Number(service.lng)];
   }
 
-  const base = LOCALITY_COORDINATES[service.localityName] || DISTRICT_COORDINATES[service.districtName] || DISTRICT_COORDINATES.Kozhikode;
+  const defaultFallback = service.id?.startsWith("kar-") ? DISTRICT_COORDINATES["Dakshina Kannada"] : DISTRICT_COORDINATES.Kozhikode;
+  const base = LOCALITY_COORDINATES[service.localityName] || DISTRICT_COORDINATES[service.districtName] || defaultFallback;
   const hash = hashString(`${service.id}-${service.categoryKey}`);
   const angle = (hash % 360) * (Math.PI / 180);
   // Micro-offset (~100m to 300m) around village/town centers.
-  // Arabian Sea is to the west (lower longitude), so bias longitude offset eastward (+0.0003 to +0.0012)
   const radius = 0.0008 + ((hash % 5) * 0.0003);
   const latOffset = Math.sin(angle) * radius;
   const lngOffset = Math.abs(Math.cos(angle)) * radius + 0.0003;

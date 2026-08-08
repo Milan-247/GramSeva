@@ -1,5 +1,5 @@
 {
-  "name": "Kerala Village Services Directory",
+  "name": "Village Services Directory",
   "description": "An offline-first, multilingual emergency and essential services directory with full Malayalam support, Kudumbashree helplines, and localized categories.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

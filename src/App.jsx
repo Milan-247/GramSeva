@@ -74,28 +74,42 @@ import {
   Printer,
   Download,
   BookmarkCheck,
-  FolderCheck
+  FolderCheck,
+  ShieldAlert
 } from "lucide-react";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext";
 import uiBackdrop from "./assets/gramseva-bg.svg";
 import graamsevaLogo from "./assets/graamseva-logo.svg";
 import {
   INITIAL_SERVICES,
+  filterServiceObservatoryDataByState,
   KERALA_DISTRICTS,
   AZHIYUR_SUB_LOCALITIES,
-  LOCALITIES_EN
+  LOCALITIES_EN,
+  TAMILNADU_DISTRICTS_LIST,
+  TAMILNADU_PANCHAYATS_BY_DISTRICT,
+  ANDHRAPRADESH_DISTRICTS_LIST,
+  ANDHRAPRADESH_PANCHAYATS_BY_DISTRICT
 } from "./data/services";
 import {
   KERALA_DISTRICTS_LIST,
   KERALA_PANCHAYATS_BY_DISTRICT
 } from "./data/keralaPanchayatsData.js";
+import {
+  KARNATAKA_DISTRICTS_LIST,
+  KARNATAKA_PANCHAYATS_BY_DISTRICT
+} from "./data/karnatakaPanchayatsData.js";
 
 import { DirectorySkeleton, MapSkeleton } from "./components/Skeletons.jsx";
 import LanguageWheel from "./components/LanguageWheel.jsx";
 import RequiredDocumentsAccordion from "./components/RequiredDocumentsAccordion.jsx";
+import FirebaseAuthModal from "./components/FirebaseAuthModal.jsx";
+import WiseGatekeeperLogin from "./components/WiseGatekeeperLogin.jsx";
+import { auth, db, signOut, onAuthStateChanged, doc, setDoc, getDoc } from "./lib/firebase";
 
 const ServiceMap = lazy(() => import("./components/ServiceMap.jsx"));
 const CertificateResolver = lazy(() => import("./components/CertificateResolver.jsx"));
+const GrievanceTracker = lazy(() => import("./components/GrievanceTracker.jsx"));
 
 const CATEGORY_ALIASES = {
   health: ["hospital", "clinic", "doctor", "medical", "ambulance", "phc", "fhc", "health centre", "arogya", "ആരോഗ്യം", "ആശുപത്രി", "ಆರೋಗ್ಯ", "ಆಸ್ಪತ್ರೆ", "स्वास्थ्य", "अस्पताल", "వైద్యం", "ఆసుపత్రి"],
@@ -103,6 +117,58 @@ const CATEGORY_ALIASES = {
   agriculture: ["krishi", "farm", "farmer", "seed", "soil", "fertilizer", "agriculture", "kisan", "കൃഷി", "കർഷകൻ", "ಕೃಷಿ", "ರೈತ", "कृषि", "किसान", "వ్యవసాయం", "రైతు"],
   education: ["school", "college", "teacher", "education", "class", "student", "library", "വിദ്യാഭ്യാസം", "സ്കൂൾ", "ಶಾಲೆ", "ಶಿಕ್ಷಣ", "स्कूल", "शिक्षा", "పాఠశాల", "విద్య"],
   government: ["panchayat", "village", "revenue", "registry", "akshaya", "certificate", "office", "ration", "tax", "പഞ്ചായത്ത്", "വില്ലേജ്", "കച്ചേരി", "ಪಂಚಾಯತ್", "ಕಚೇರಿ", "सरकार", "पंचायत", "प्रमाणपत्र", "ప్రభుత్వం", "పంచాయతీ"]
+};
+
+const STATE_WELCOME_GREETINGS = {
+  kerala: {
+    emoji: "🌴",
+    en: "Swagatham! Welcome to Kerala's GramSeva Citizen Services Hub",
+    ml: "സ്വാഗതം! കേരള ഗ്രാമസേവ പൗരസേവന കേന്ദ്രത്തിലേക്ക് സ്വാഗതം",
+    hi: "स्वागतम्! केरल ग्राम सेवा नागरिक सेवा केंद्र में आपका स्वागत है",
+    kn: "ಸ್ವಾಗತ! ಕೇರಳ ಗ್ರಾಮ ಸೇವಾ ನಾಗರಿಕ ಸೇವಾ ಕೇಂದ್ರಕ್ಕೆ ಸ್ವಾಗತ",
+    te: "స్వాగతం! కేరళ గ్రామ సేవా పౌర సేవల కేంద్రానికి స్వాగതം"
+  },
+  karnataka: {
+    emoji: "🏰",
+    en: "Suswagatha! Welcome to Karnataka Grama Seva e-Governance Portal",
+    ml: "സുസ്വാഗതം! കർണാടക ഗ്രാമസേവ ഇ-ഗവേണൻസ് പോർട്ടലിലേക്ക് സ്വാഗതം",
+    hi: "सुस्वागतम्! कर्नाटक ग्राम सेवा ई-गवर्नेंस पोर्टल में आपका स्वागत है",
+    kn: "ಸುಸ್ವಾಗತ! ಕರ್ನಾಟಕ ಗ್ರಾಮ ಸೇವಾ ಇ-ಆಡಳಿತ ಪೋರ್ಟಲ್‌ಗೆ ಸುಸ್ವಾಗತ",
+    te: "సుస్వాగതം! కర్ణాటక గ్రామ సేవా ఈ-గవర్నెన్స్ పోర్టల్‌కు స్వాగതം"
+  },
+  tamilnadu: {
+    emoji: "🛕",
+    en: "Vanakkam! Welcome to Tamil Nadu e-Sevai Rural Governance Hub",
+    ml: "വണക്കം! തമിഴ്‌നാട് ഇ-സേവൈ ഗ്രാമീണ ഭരണ കേന്ദ്രത്തിലേക്ക് സ്വാഗതം",
+    hi: "வணக்கம்! तमिलनाडु ई-सेवै ग्रामीण शासन पोर्टल में आपका स्वागत है",
+    kn: "வணக்கம்! ತಮಿಳುನಾಡು ಇ-ಸೇವೆ ಗ್ರಾಮೀಣ ಆಡಳಿತ ಕೇಂದ್ರಕ್ಕೆ ಸುಸ್ವಾಗತ",
+    te: "வணக்கம்! తమిళనాడు ఈ-సేవై గ్రామీణ పాలన కేంద్రానికి స్వాగతం"
+  },
+  andhra: {
+    emoji: "🌾",
+    en: "Namaskaram! Welcome to Andhra Pradesh Grama Sachivalayam Portal",
+    ml: "നമസ്കാരം! ആന്ധ്രാപ്രദേശ് ഗ്രാമ സചിവാലയം പൗരകേന്ദ്രത്തിലേക്ക് സ്വാഗതം",
+    hi: "नमस्कारम्! आंध्र प्रदेश ग्राम सचिवालयम नागरिक पोर्टल में आपका स्वागत है",
+    kn: "ನಮಸ್ಕಾರಂ! ಆಂಧ್ರ ಪ್ರದೇಶ ಗ್ರಾಮ ಸಚಿವಾಲಯಂ ನಾಗರಿಕ ಪೋರ್ಟಲ್‌ಗೆ ಸುಸ್ವಾಗತ",
+    te: "నమస్కారం! ఆంధ్రప్రదేశ్ గ్రామ సచివాలయం పౌర సేవల పోర్టల్‌కు స్వాగతం"
+  },
+  all: {
+    emoji: "🇮🇳",
+    en: "Namaste! Welcome to Pan-India GramSeva Rural Citizen Portal",
+    ml: "നമസ്തേ! ഭാരതീയ ഗ്രാമസേവ ഗ്രാമീണ പൗരസേവന കേന്ദ്രത്തിലേക്ക് സ്വാഗതം",
+    hi: "नमस्ते! ऑल-इंडिया ग्राम सेवा ग्रामीण नागरिक पोर्टल में आपका स्वागत है",
+    kn: "നമസ്ത്തെ! ಭಾರತೀಯ ಗ್ರಾಮ ಸೇವಾ ಗ್ರಾಮೀಣ ನಾಗರಿಕ ಪೋರ್ಟಲ್‌ಗೆ ಸುಸ್ವಾಗತ",
+    te: "నమస్తే! భారతీయ గ్రామ సేవా గ్రామీణ పౌర సేవల పోర్టల్‌కు స్వాగతం"
+  }
+};
+
+const getStateWelcomeGreeting = (stateId, language = "en") => {
+  const stateKey = String(stateId || "all").toLowerCase().trim();
+  const stateData = STATE_WELCOME_GREETINGS[stateKey] || STATE_WELCOME_GREETINGS.all;
+  return {
+    text: stateData[language] || stateData.en || STATE_WELCOME_GREETINGS.all.en,
+    emoji: stateData.emoji || "🇮🇳"
+  };
 };
 
 function normalizeSearchText(value = "") {
@@ -354,7 +420,6 @@ function DirectoryApp() {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isListening, setIsListening] = useState(false);
 
   // QOL #5: Recent Search History State
   const [recentSearches, setRecentSearches] = useState(() => {
@@ -386,45 +451,6 @@ function DirectoryApp() {
     } catch (e) {}
   };
 
-  // QOL #6: Web Speech API Voice Search
-  const handleVoiceSearch = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Voice search is not supported in this browser. Please type your query in the search bar.");
-      return;
-    }
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = language === "ml" ? "ml-IN" : language === "hi" ? "hi-IN" : language === "te" ? "te-IN" : "en-IN";
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.onerror = () => {
-        setIsListening(false);
-      };
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          setSearchQuery(transcript);
-          saveRecentSearch(transcript);
-        }
-      };
-
-      recognition.start();
-    } catch (e) {
-      setIsListening(false);
-    }
-  };
-
   // QOL #1: Saved Citizen Document Wallet State
   const [walletDocs, setWalletDocs] = useState(() => {
     try {
@@ -446,6 +472,13 @@ function DirectoryApp() {
   };
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [mapCategoryFilter, setMapCategoryFilter] = useState("all");
+  const [selectedState, setSelectedState] = useState(() => {
+    try {
+      return localStorage.getItem("gramseva_state") || "kerala";
+    } catch (e) {
+      return "kerala";
+    }
+  });
   const [selectedDistrict, setSelectedDistrict] = useState("Kozhikode");
   const [selectedLocality, setSelectedLocality] = useState("Azhiyur");
   const [isNearMeActive, setIsNearMeActive] = useState(false);
@@ -463,126 +496,88 @@ function DirectoryApp() {
   const [isHighContrast, setIsHighContrast] = useState(false);
   const [isUiPending, startUiTransition] = useTransition();
 
-  // User Authentication & Citizen Profile state
-  const [currentUser, setCurrentUser] = useState(() => {
+  // User Authentication & Citizen Profile state (Firebase Auth + Firestore)
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showStartLoginModal, setShowStartLoginModal] = useState(false);
+  const [isGuestAllowed, setIsGuestAllowed] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        try {
+          const userDocRef = doc(db, "users", fbUser.uid);
+          const userSnap = await getDoc(userDocRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            const userObj = {
+              uid: fbUser.uid,
+              email: fbUser.email,
+              name: data.name || fbUser.displayName || "Citizen",
+              phone: data.phone || fbUser.phoneNumber || "+91 98470 00000",
+              district: data.district || "Kozhikode",
+              locality: data.locality || "Azhiyur",
+              role: data.role || "Resident / Citizen",
+              roleBadge: data.roleBadge || (data.role?.includes("Official") ? "Official" : "Verified Citizen"),
+              rationCard: data.rationCard || "Priority BPL",
+              avatarColor: data.avatarColor || "bg-emerald-700",
+              loggedInAt: new Date().toISOString()
+            };
+            setCurrentUser(userObj);
+            try { localStorage.setItem("gramseva_user", JSON.stringify(userObj)); } catch (e) {}
+          } else {
+            const newProfile = {
+              uid: fbUser.uid,
+              name: fbUser.displayName || fbUser.email?.split("@")[0] || "Citizen",
+              email: fbUser.email || "",
+              phone: fbUser.phoneNumber || "+91 98470 00000",
+              district: selectedDistrict !== "all" ? selectedDistrict : "Kozhikode",
+              locality: selectedLocality !== "all" ? selectedLocality : "Azhiyur",
+              role: "Resident / Citizen",
+              roleBadge: "Verified Citizen",
+              rationCard: "Priority BPL",
+              avatarColor: "bg-emerald-700",
+              createdAt: new Date().toISOString()
+            };
+            await setDoc(userDocRef, newProfile);
+            const userObj = { ...newProfile, loggedInAt: new Date().toISOString() };
+            setCurrentUser(userObj);
+            try { localStorage.setItem("gramseva_user", JSON.stringify(userObj)); } catch (e) {}
+          }
+        } catch (err) {
+          console.error("Firestore fetch error:", err);
+          const userObj = {
+            uid: fbUser.uid,
+            email: fbUser.email,
+            name: fbUser.displayName || fbUser.email?.split("@")[0] || "Citizen",
+            phone: "+91 98470 00000",
+            district: selectedDistrict !== "all" ? selectedDistrict : "Kozhikode",
+            locality: selectedLocality !== "all" ? selectedLocality : "Azhiyur",
+            role: "Resident / Citizen",
+            roleBadge: "Verified Citizen",
+            rationCard: "Priority BPL",
+            avatarColor: "bg-emerald-700",
+            loggedInAt: new Date().toISOString()
+          };
+          setCurrentUser(userObj);
+        }
+      } else {
+        setCurrentUser(null);
+        try { localStorage.removeItem("gramseva_user"); } catch (e) {}
+      }
+    });
+    return () => unsubscribe();
+  }, [selectedDistrict, selectedLocality]);
+
+  const handleLogout = async () => {
     try {
-      const saved = localStorage.getItem("gramseva_user");
-      return saved ? JSON.parse(saved) : null;
+      await signOut(auth);
     } catch (e) {
-      return null;
+      console.error("Firebase SignOut error:", e);
     }
-  });
-  const [loginMethod, setLoginMethod] = useState("otp");
-  const [loginPhone, setLoginPhone] = useState("");
-  const [loginAadhaar, setLoginAadhaar] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpInput, setOtpInput] = useState("");
-  const [loginNameInput, setLoginNameInput] = useState("");
-  const [loginRoleInput, setLoginRoleInput] = useState("Resident / Citizen");
-  const [loginError, setLoginError] = useState("");
-
-  const DEMO_ACCOUNTS = [
-    {
-      name: "Suresh Kumar",
-      phone: "+91 94470 12345",
-      aadhaarLast4: "8912",
-      district: "Kozhikode",
-      locality: "Azhiyur",
-      role: "Resident / Farmer",
-      roleBadge: "Villager",
-      rationCard: "BPL (Pink Card)",
-      avatarColor: "bg-emerald-600"
-    },
-    {
-      name: "Smt. Anitha C. V.",
-      phone: "+91 94471 98765",
-      aadhaarLast4: "4321",
-      district: "Kozhikode",
-      locality: "Azhiyur",
-      role: "Panchayat President",
-      roleBadge: "Official",
-      rationCard: "APL (White Card)",
-      avatarColor: "bg-amber-600"
-    },
-    {
-      name: "Fatima Beevi",
-      phone: "+91 94472 55443",
-      aadhaarLast4: "6789",
-      district: "Kottayam",
-      locality: "Vaikom",
-      role: "Asha Worker / Health Volunteer",
-      roleBadge: "Health Worker",
-      rationCard: "Non-Priority (Blue Card)",
-      avatarColor: "bg-teal-600"
-    }
-  ];
-
-  const handleQuickDemoLogin = (account) => {
-    const userObj = {
-      ...account,
-      loggedInAt: new Date().toISOString()
-    };
-    setCurrentUser(userObj);
-    try {
-      localStorage.setItem("gramseva_user", JSON.stringify(userObj));
-    } catch (e) {}
-    setSuccessToast(`Welcome back, ${account.name}!`);
-    setTimeout(() => setSuccessToast(""), 3500);
-  };
-
-  const handleSendOtp = (e) => {
-    e.preventDefault();
-    if (loginMethod === "otp" && !loginPhone.trim()) {
-      setLoginError("Please enter a valid 10-digit mobile number.");
-      return;
-    }
-    if (loginMethod === "aadhaar" && loginAadhaar.replace(/\s+/g, "").length < 12) {
-      setLoginError("Please enter a 12-digit Aadhaar number.");
-      return;
-    }
-    setLoginError("");
-    setOtpSent(true);
-    setOtpInput("1947");
-  };
-
-  const handleVerifyAndLogin = (e) => {
-    e.preventDefault();
-    if (!otpInput || otpInput.trim().length < 4) {
-      setLoginError("Please enter the 4-digit OTP code.");
-      return;
-    }
-    const name = loginNameInput.trim() || (loginMethod === "otp" ? `Resident (${loginPhone.slice(-4) || "Mobile"})` : `Aadhaar Holder (${loginAadhaar.slice(-4) || "Card"})`);
-    const userObj = {
-      name,
-      phone: loginPhone ? `+91 ${loginPhone}` : "+91 98470 00000",
-      aadhaarLast4: loginAadhaar ? loginAadhaar.slice(-4) : "1947",
-      district: selectedDistrict !== "all" ? selectedDistrict : "Kozhikode",
-      locality: selectedLocality !== "all" ? selectedLocality : "Azhiyur",
-      role: loginRoleInput,
-      roleBadge: "Verified Citizen",
-      rationCard: "Priority BPL",
-      avatarColor: "bg-emerald-700",
-      loggedInAt: new Date().toISOString()
-    };
-    setCurrentUser(userObj);
-    try {
-      localStorage.setItem("gramseva_user", JSON.stringify(userObj));
-    } catch (e) {}
-    setOtpSent(false);
-    setOtpInput("");
-    setLoginPhone("");
-    setLoginAadhaar("");
-    setLoginNameInput("");
-    setLoginError("");
-    setSuccessToast(`Logged in successfully as ${name}`);
-    setTimeout(() => setSuccessToast(""), 3500);
-  };
-
-  const handleLogout = () => {
     setCurrentUser(null);
-    try {
-      localStorage.removeItem("gramseva_user");
-    } catch (e) {}
+    setIsGuestAllowed(false);
+    setCurrentTab("services");
+    try { localStorage.removeItem("gramseva_user"); } catch (e) {}
     setSuccessToast("Logged out successfully");
     setTimeout(() => setSuccessToast(""), 3500);
   };
@@ -615,12 +610,12 @@ function DirectoryApp() {
       hash = idStr.charCodeAt(j) + ((hash << 5) - hash);
     }
     const noise = Math.abs(hash % 10) / 10;
-    const isSameDistrict = service.districtName === "Kottayam";
-    const isSameLocality = service.localityName === "Vaikom";
-    if (isSameDistrict && isSameLocality) {
-      return Math.round((0.5 + noise * 1.5) * 10) / 10;
+    const isSameDistrict = selectedDistrict !== "all" ? service.districtName === selectedDistrict : (service.districtName === "Kozhikode" || service.districtName === "Dakshina Kannada");
+    const isSameLocality = selectedLocality !== "all" && service.localityName === selectedLocality;
+    if (isSameLocality) {
+      return Math.round((0.3 + noise * 1.2) * 10) / 10;
     } else if (isSameDistrict) {
-      const idx = Math.abs(hash % 12) + 3;
+      const idx = Math.abs(hash % 8) + 1.2;
       return Math.round((idx + noise) * 10) / 10;
     } else {
       const distMapping = {
@@ -636,10 +631,18 @@ function DirectoryApp() {
         "Kozhikode": 268,
         "Wayanad": 322,
         "Kannur": 354,
-        "Kasaragod": 435
+        "Kasaragod": 435,
+        "Dakshina Kannada": 12,
+        "Udupi": 55,
+        "Kodagu": 88,
+        "Mysuru": 135,
+        "Uttara Kannada": 165,
+        "Bengaluru Urban": 350,
+        "Belagavi": 380,
+        "Kalaburagi": 520
       };
-      const baseDist = distMapping[service.districtName || ""] || 160;
-      return Math.round((baseDist + noise * 12) * 10) / 10;
+      const baseDist = distMapping[service.districtName || ""] || 45;
+      return Math.round((baseDist + noise * 8) * 10) / 10;
     }
   };
   const getServiceSearchText = (service) => {
@@ -1162,14 +1165,32 @@ function DirectoryApp() {
     }
     return getCategoryIcon(catLower);
   };
-  const categoryOptions = [
-    { key: "all", label: t.allCategories || "All", icon: <Building2 className="w-3.5 h-3.5" /> },
-    { key: "health", label: t.health || "Health", icon: <HeartPulse className="w-3.5 h-3.5" /> },
-    { key: "education", label: t.education || "Education", icon: <GraduationCap className="w-3.5 h-3.5" /> },
-    { key: "government", label: t.government || "Government", icon: <Shield className="w-3.5 h-3.5" /> },
-    { key: "water", label: t.water || "Water", icon: <Droplet className="w-3.5 h-3.5" /> },
-    { key: "agriculture", label: t.agriculture || "Agriculture", icon: <Sprout className="w-3.5 h-3.5" /> }
-  ];
+  const stateServices = useMemo(() => {
+    return filterServiceObservatoryDataByState(services, selectedState);
+  }, [services, selectedState]);
+
+  const categoryCountsForState = useMemo(() => {
+    const counts = { all: stateServices.length, health: 0, education: 0, government: 0, water: 0, agriculture: 0 };
+    stateServices.forEach((s) => {
+      const catKey = s.categoryKey;
+      if (counts[catKey] !== undefined) {
+        counts[catKey] += 1;
+      }
+    });
+    return counts;
+  }, [stateServices]);
+
+  const categoryOptions = useMemo(() => {
+    return [
+      { key: "all", label: t.allCategories || "All", count: categoryCountsForState.all, icon: <Building2 className="w-3.5 h-3.5" /> },
+      { key: "health", label: t.health || "Health", count: categoryCountsForState.health, icon: <HeartPulse className="w-3.5 h-3.5" /> },
+      { key: "education", label: t.education || "Education", count: categoryCountsForState.education, icon: <GraduationCap className="w-3.5 h-3.5" /> },
+      { key: "government", label: t.government || "Government", count: categoryCountsForState.government, icon: <Shield className="w-3.5 h-3.5" /> },
+      { key: "water", label: t.water || "Water", count: categoryCountsForState.water, icon: <Droplet className="w-3.5 h-3.5" /> },
+      { key: "agriculture", label: t.agriculture || "Agriculture", count: categoryCountsForState.agriculture, icon: <Sprout className="w-3.5 h-3.5" /> }
+    ];
+  }, [t, categoryCountsForState]);
+
   const getServiceShareText = (service) => {
     const data = service.translations[language] || service.translations.en;
     return `${data.title}
@@ -1248,36 +1269,41 @@ Phone: ${service.phoneNumber}`;
     };
   }), [services]);
   const normalizedSearchQuery = normalizeSearchText(settledSearchQuery);
-  const filteredServices = useMemo(() => searchableServices
-    .map(({ service, searchText, searchTokens }) => ({
-      service,
-      searchScore: getSearchScore(searchText, searchTokens, normalizedSearchQuery)
-    }))
-    .filter(({ service, searchScore }) => {
-      if (selectedCategory !== "all" && service.categoryKey !== selectedCategory) {
-        if (selectedCategory === "agriculture" && service.translations.en.category.toLowerCase() === "ration") {
-        } else {
-          return false;
+  const filteredServices = useMemo(() => {
+    const stateServiceIds = new Set(stateServices.map((s) => s.id));
+
+    return searchableServices
+      .filter(({ service }) => stateServiceIds.has(service.id))
+      .map(({ service, searchText, searchTokens }) => ({
+        service,
+        searchScore: getSearchScore(searchText, searchTokens, normalizedSearchQuery)
+      }))
+      .filter(({ service, searchScore }) => {
+        if (selectedCategory !== "all" && service.categoryKey !== selectedCategory) {
+          if (selectedCategory === "agriculture" && service.translations?.en?.category?.toLowerCase() === "ration") {
+          } else {
+            return false;
+          }
         }
-      }
-      if (selectedDistrict !== "all" && service.districtName !== selectedDistrict) return false;
-      if (selectedLocality !== "all") {
-        if (selectedLocality === "Azhiyur" || selectedLocality.toLowerCase().includes("azhiyur")) {
-          const isAzhiyurPanchayat = service.panchayatName === "Azhiyur" || service.localityName === "Azhiyur" || AZHIYUR_SUB_LOCALITIES.some((sub) => sub.en === service.localityName);
-          if (!isAzhiyurPanchayat) return false;
-        } else if (service.localityName !== selectedLocality) {
-          return false;
+        if (selectedDistrict !== "all" && service.districtName !== selectedDistrict) return false;
+        if (selectedLocality !== "all") {
+          if (selectedLocality === "Azhiyur" || selectedLocality.toLowerCase().includes("azhiyur")) {
+            const isAzhiyurPanchayat = service.panchayatName === "Azhiyur" || service.localityName === "Azhiyur" || AZHIYUR_SUB_LOCALITIES.some((sub) => sub.en === service.localityName);
+            if (!isAzhiyurPanchayat) return false;
+          } else if (service.localityName !== selectedLocality) {
+            return false;
+          }
         }
-      }
-      if (isNearMeActive && getSimulatedDistance(service) > nearMeDistance) return false;
-      return !normalizedSearchQuery || searchScore > 0;
-    })
-    .sort((a, b) => {
-      if (normalizedSearchQuery && b.searchScore !== a.searchScore) return b.searchScore - a.searchScore;
-      if (isNearMeActive || sortByProximity) return getSimulatedDistance(a.service) - getSimulatedDistance(b.service);
-      return 0;
-    })
-    .map(({ service }) => service), [searchableServices, normalizedSearchQuery, selectedCategory, selectedDistrict, selectedLocality, isNearMeActive, nearMeDistance, sortByProximity]);
+        if (isNearMeActive && getSimulatedDistance(service) > nearMeDistance) return false;
+        return !normalizedSearchQuery || searchScore > 0;
+      })
+      .sort((a, b) => {
+        if (normalizedSearchQuery && b.searchScore !== a.searchScore) return b.searchScore - a.searchScore;
+        if (isNearMeActive || sortByProximity) return getSimulatedDistance(a.service) - getSimulatedDistance(b.service);
+        return 0;
+      })
+      .map(({ service }) => service);
+  }, [stateServices, searchableServices, normalizedSearchQuery, selectedCategory, selectedDistrict, selectedLocality, isNearMeActive, nearMeDistance, sortByProximity]);
   const cleanTitle = (title) => {
     if (!title) return "";
     return title.replace(/\s*-\s*#[0-9]+$/g, "").replace(/\s*#\d+$/g, "").trim();
@@ -1371,6 +1397,23 @@ Phone: ${service.phoneNumber}`;
     { id: "water connection", label: "Water connection", helper: t.water || "Water" },
     { id: "family health centre", label: "Family Health Centre", helper: t.health || "Health" }
   ];
+
+  if (!currentUser && !isGuestAllowed) {
+    return (
+      <WiseGatekeeperLogin
+        onLoginSuccess={() => setIsGuestAllowed(true)}
+        onGuestAccess={() => setIsGuestAllowed(true)}
+        selectedState={selectedState}
+        onStateChange={setSelectedState}
+        selectedDistrict={selectedDistrict}
+        selectedLocality={selectedLocality}
+        setSuccessToast={setSuccessToast}
+        districtsList={KERALA_DISTRICTS_LIST}
+        panchayatsByDistrict={KERALA_PANCHAYATS_BY_DISTRICT}
+      />
+    );
+  }
+
   return <div id="dir-app-root" data-theme={currentTheme} style={{ "--gram-bg": `url(${uiBackdrop})` }} className={`gram-root min-h-screen ${isHighContrast ? "bg-black high-contrast" : ""} text-slate-900 font-sans antialiased flex items-stretch justify-center transition-all duration-300 ${isLargeText ? "text-[110%]" : ""}`}>
       <a href="#service-results" className="skip-link">Skip to service results</a>
       <nav className="observatory-nav" aria-label="Primary navigation">
@@ -1468,64 +1511,96 @@ Phone: ${service.phoneNumber}`;
       {
     /* App frame */
   }
-      <div data-theme={currentTheme} className="directory-frame relative w-full max-w-[1600px] h-dvh min-h-[620px] bg-[#101214] lg:h-[calc(100dvh-32px)] lg:rounded-2xl lg:border lg:border-slate-300/70 lg:shadow-2xl flex flex-col overflow-hidden transition-all">
+      <div data-theme={currentTheme} className="directory-frame relative w-full max-w-[1600px] h-dvh min-h-[620px] bg-[#101214] lg:h-[calc(100vh-32px)] lg:my-4 lg:rounded-2xl lg:border lg:border-slate-300/70 lg:shadow-2xl flex flex-col overflow-hidden transition-all">
         
         {
     /* Dynamic Mobile Banner Header block */
   }
-        <header className={`gram-header app-header ${currentTab === "services" || currentTab === "map" ? "has-directory-controls" : "is-compact"} text-white p-2.5 sm:p-5 lg:p-6 pt-2 sm:pt-6 pb-2.5 sm:pb-5 shrink-0 flex flex-col gap-1 sm:gap-2 relative`}>
+        <header className="gram-header app-header bg-[#0e1626] text-white p-3 sm:p-5 pt-3 pb-3 shrink-0 flex flex-col gap-2 relative border-b border-slate-800/80">
           
-
-
-          {
-    /* Panchayat Branding */
-  }
-          <div className="brand-language-row flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 mt-0.5 sm:mt-1">
-            <div className="brand-identity-row flex items-center gap-2.5 sm:gap-3.5 min-w-0 w-full sm:w-auto">
-              <div className="brand-logo bg-white p-1.5 sm:p-2 rounded-2xl shadow-md border border-emerald-200/80 shrink-0">
-                <img src={graamsevaLogo} alt="GraamSeva Logo" className="brand-logo-image h-9 sm:h-12 w-auto object-contain" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="header-title font-classical text-base sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-sm">
+          {/* Panchayat Branding Row */}
+          <div className="flex flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="font-serif font-bold text-xl sm:text-2xl text-white tracking-tight shrink-0">
+                  GramSeva
+                </h1>
+                <span className="text-slate-600 font-light text-lg sm:text-xl hidden xs:inline">|</span>
+                <p className="font-serif italic text-sm sm:text-lg text-[#e07a1e] font-normal truncate">
                   {selectedLocality === "all"
-                    ? selectedDistrict === "all" ? "Kerala Service Directory" : `${selectedDistrict} Directory`
-                    : selectedLocality === "Azhiyur" || selectedLocality.toLowerCase().includes("panchayat")
-                      ? `${selectedLocality} Grama Panchayat`
-                      : `${selectedLocality} (Azhiyur Panchayat)`}
-                </h2>
+                    ? selectedDistrict === "all"
+                      ? selectedState === "karnataka"
+                        ? "Karnataka Grama Panchayat Directory"
+                        : selectedState === "all"
+                          ? "Pan-India Directory"
+                          : "Kerala Citizen Directory"
+                      : `${selectedDistrict} Panchayat Directory`
+                    : `${selectedLocality} Grama Panchayat`}
+                </p>
               </div>
             </div>
             
-            {
-    /* Horizontal Scroll Wheel Language Selector */
-  }
-            <div className="language-wheel-shell shrink-0 w-full sm:w-auto sm:max-w-[320px]">
-              <LanguageWheel compact={true} />
+            {/* Language Selector & User Account */}
+            <div className="shrink-0 flex items-center gap-2">
+              <div className="max-w-[130px] sm:max-w-[280px]">
+                <LanguageWheel compact={true} />
+              </div>
+              {currentUser ? (
+                <button
+                  type="button"
+                  onClick={() => navigateToTab("profile")}
+                  className="bg-slate-800/90 hover:bg-slate-800 border border-slate-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
+                  title={`Logged in as ${currentUser.name}`}
+                >
+                  <div className="w-5 h-5 rounded-full bg-[#e07a1e] flex items-center justify-center text-[10px] font-black text-white shrink-0">
+                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : "M"}
+                  </div>
+                  <span className="hidden sm:inline max-w-[100px] truncate text-[11px] font-bold text-slate-100">{currentUser.name}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigateToTab("profile")}
+                  className="bg-slate-800/90 hover:bg-slate-800 border border-slate-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
+                >
+                  <div className="w-5 h-5 rounded-full bg-[#e07a1e] flex items-center justify-center text-[10px] font-black text-white shrink-0">
+                    M
+                  </div>
+                  <span className="hidden sm:inline text-[11px] font-bold text-slate-100">Milan Pullapalli</span>
+                </button>
+              )}
             </div>
           </div>
 
+          {/* Sub-bar: State Welcome Message Banner */}
+          {(() => {
+            const greeting = getStateWelcomeGreeting(selectedState, language);
+            return (
+              <div className="state-welcome-banner bg-slate-900/90 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-[#e07a1e] font-serif font-bold text-base shrink-0">§</span>
+                  <p className="text-xs sm:text-sm font-medium text-slate-200 tracking-wide truncate">
+                    {greeting.text || "Swagatham — welcome to Kerala's GramSeva Citizen Services Hub"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 text-[10px] uppercase font-mono font-bold tracking-wider bg-slate-800 text-slate-300 border border-slate-700 px-2.5 py-0.5 rounded">
+                  <span>{selectedState === "all" ? "PAN-INDIA" : `${selectedState.toUpperCase()}`}</span>
+                </div>
+              </div>
+            );
+          })()}
 
-
-          <div className="hero-wireframe hidden sm:block">
-            <p>
-              Verified civic records for <span>health</span>, water, schools, revenue offices, agriculture support, and emergency services.
-            </p>
-          </div>
-
-          {(currentTab === "services" || currentTab === "map") && <>
-          {
-    /* Primary search & Location filter row */
-  }
+          {/* Primary search & Location filter row */}
           <div className="flex flex-wrap md:flex-nowrap items-center gap-2 mt-1 sm:mt-2">
             <div className="relative flex-1 min-w-[220px]">
-              <div className={`service-search bg-white flex items-center border rounded-xl shadow-sm ${isSearchFocused ? "is-focused" : ""} ${searchQuery !== settledSearchQuery ? "is-searching" : ""}`}>
+              <div className={`service-search bg-white flex items-center border border-stone-300/90 rounded-xl shadow-2xs ${isSearchFocused ? "is-focused ring-2 ring-amber-500/30 border-amber-500" : ""} ${searchQuery !== settledSearchQuery ? "is-searching" : ""}`}>
                 <Search className="w-4 h-4 text-slate-400 ml-2.5 sm:ml-3 shrink-0" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   aria-busy={searchQuery !== settledSearchQuery}
                   aria-label="Search services by name, category, place, contact, or language"
-                  placeholder={t.searchPlaceholder || "Search services or speak..."}
+                  placeholder={t.searchPlaceholder || "Search services, contact names, offices..."}
                   value={searchQuery}
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
@@ -1535,34 +1610,19 @@ Phone: ${service.phoneNumber}`;
                       saveRecentSearch(searchQuery);
                     }
                   }}
-                  className="w-full text-slate-800 placeholder-slate-400 bg-transparent text-xs sm:text-sm py-2 sm:py-2.5 px-2 outline-none border-none leading-none font-semibold min-h-[38px] sm:min-h-[42px]"
+                  className="w-full text-slate-900 placeholder-slate-400 bg-transparent text-xs sm:text-sm py-2 sm:py-2.5 px-2 outline-none border-none leading-none font-medium min-h-[38px] sm:min-h-[42px]"
                 />
-
-                {/* QOL #6: Voice Search Button */}
-                <button
-                  type="button"
-                  onClick={handleVoiceSearch}
-                  aria-label={isListening ? "Stop voice search" : "Start voice search"}
-                  className={`p-1.5 mr-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
-                    isListening
-                      ? "bg-rose-500 text-white animate-pulse"
-                      : "text-emerald-700 hover:bg-emerald-50 active:scale-95"
-                  }`}
-                  title={isListening ? "Listening... Speak now" : "Voice Search (Speak in Malayalam, Hindi, or English)"}
-                >
-                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </button>
 
                 {searchQuery ? (
                   <button onClick={() => setSearchQuery("")} className="search-clear" aria-label="Clear search">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 ) : (
-                  <span className="search-shortcut hidden sm:inline" aria-hidden="true"><Keyboard className="w-3.5 h-3.5" /> /</span>
+                  <span className="search-shortcut hidden sm:inline text-slate-400 text-xs mr-2" aria-hidden="true">⌘K</span>
                 )}
               </div>
 
-              {/* QOL #5: Search Suggestions & Recent Search History Dropdown */}
+              {/* Search Suggestions & Recent Search History Dropdown */}
               {isSearchFocused && (
                 <div className="search-suggestions absolute top-full mt-2 left-0 right-0 z-40 bg-white text-slate-900 border border-stone-200 rounded-xl shadow-xl p-2.5">
                   {searchQuery.trim().length > 0 ? (
@@ -1571,18 +1631,15 @@ Phone: ${service.phoneNumber}`;
                         <div className="px-2 pb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">{ui.searchSuggestions}</div>
                         {searchSuggestions.map((item) => (
                           <button
-                            type="button"
                             key={item.id}
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => {
+                            onMouseDown={() => {
                               setSearchQuery(item.label);
                               saveRecentSearch(item.label);
-                              setIsSearchFocused(false);
                             }}
-                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-emerald-50 transition flex items-center justify-between gap-3 cursor-pointer"
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 transition flex items-center justify-between gap-3 cursor-pointer"
                           >
                             <span className="text-xs font-bold truncate text-slate-900">{item.label}</span>
-                            <span className="text-[10px] text-emerald-700 font-bold shrink-0">{item.helper}</span>
+                            <span className="text-[10px] text-[#c26111] font-bold shrink-0">{item.helper}</span>
                           </button>
                         ))}
                       </>
@@ -1592,12 +1649,10 @@ Phone: ${service.phoneNumber}`;
                       <div>
                         <div className="flex items-center justify-between px-2 pb-1.5 border-b border-stone-100 mb-1">
                           <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                            <History className="w-3 h-3 text-emerald-600" /> Recent Searches
+                            <History className="w-3 h-3 text-[#c26111]" /> Recent Searches
                           </span>
                           <button
-                            type="button"
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={clearRecentSearches}
+                            onMouseDown={clearRecentSearches}
                             className="text-[9px] font-bold text-slate-400 hover:text-rose-600 cursor-pointer"
                           >
                             Clear History
@@ -1606,15 +1661,11 @@ Phone: ${service.phoneNumber}`;
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {recentSearches.map((term, idx) => (
                             <button
-                              type="button"
                               key={idx}
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
+                              onMouseDown={() => {
                                 setSearchQuery(term);
-                                saveRecentSearch(term);
-                                setIsSearchFocused(false);
                               }}
-                              className="bg-stone-100 hover:bg-emerald-100 text-slate-800 hover:text-emerald-950 border border-stone-200 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                              className="bg-stone-100 hover:bg-amber-100 text-slate-800 border border-stone-200 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                             >
                               <span>🔍 {term}</span>
                             </button>
@@ -1627,10 +1678,50 @@ Phone: ${service.phoneNumber}`;
               )}
             </div>
 
-            {/* District & Locality Selectors */}
-            <div className="location-selectors flex items-center gap-1.5 shrink-0 w-full md:w-auto overflow-x-auto scrollbar-none py-0.5">
-              <div className="location-select flex items-center gap-1 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0">
-                <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            {/* State, District & Locality Selectors */}
+            <div className="flex items-center gap-1.5 shrink-0 w-full md:w-auto overflow-x-auto scrollbar-none py-0.5">
+              {/* State Selector */}
+              <div className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0 shadow-2xs">
+                <Landmark className="w-3.5 h-3.5 text-[#e07a1e] shrink-0" />
+                <select
+                  value={selectedState}
+                  onChange={(e) => {
+                    const stateVal = e.target.value;
+                    setSelectedState(stateVal);
+                    try {
+                      localStorage.setItem("gramseva_state", stateVal);
+                    } catch (err) {}
+                    if (stateVal === "kerala") {
+                      setSelectedDistrict("Kozhikode");
+                      setSelectedLocality("Azhiyur");
+                    } else if (stateVal === "karnataka") {
+                      setSelectedDistrict("Dakshina Kannada");
+                      setSelectedLocality("Mangaluru");
+                    } else if (stateVal === "tamilnadu") {
+                      setSelectedDistrict("Chennai");
+                      setSelectedLocality("all");
+                    } else if (stateVal === "andhra") {
+                      setSelectedDistrict("Visakhapatnam");
+                      setSelectedLocality("all");
+                    } else {
+                      setSelectedDistrict("all");
+                      setSelectedLocality("all");
+                    }
+                  }}
+                  className="bg-transparent text-white font-bold text-xs outline-none cursor-pointer border-none py-0 pr-1 [&_option]:bg-slate-900 [&_option]:text-white [&_optgroup]:bg-slate-900 [&_optgroup]:text-[#e07a1e]"
+                  aria-label="Select State"
+                >
+                  <option value="kerala" className="bg-slate-900 text-white">🌴 Kerala</option>
+                  <option value="karnataka" className="bg-slate-900 text-white">🏰 Karnataka</option>
+                  <option value="tamilnadu" className="bg-slate-900 text-white">🛕 Tamil Nadu</option>
+                  <option value="andhra" className="bg-slate-900 text-white">🌾 Andhra Pradesh</option>
+                  <option value="all" className="bg-slate-900 text-white">🇮🇳 All States</option>
+                </select>
+              </div>
+
+              {/* District Selector */}
+              <div className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0 shadow-2xs">
+                <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <select
                   value={selectedDistrict}
                   onChange={(e) => {
@@ -1638,51 +1729,88 @@ Phone: ${service.phoneNumber}`;
                     setSelectedDistrict(dist);
                     if (dist === "Kozhikode") {
                       setSelectedLocality("Azhiyur");
+                    } else if (dist === "Dakshina Kannada") {
+                      setSelectedLocality("Mangaluru");
                     } else if (dist === "all") {
                       setSelectedLocality("all");
                     } else {
-                      const firstLoc = LOCALITIES_EN[dist]?.[0] || "all";
+                      const firstLoc = (KERALA_PANCHAYATS_BY_DISTRICT[dist] || KARNATAKA_PANCHAYATS_BY_DISTRICT[dist])?.[0]?.en || LOCALITIES_EN[dist]?.[0] || "all";
                       setSelectedLocality(firstLoc);
                     }
                   }}
-                  className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer border-none py-0 pr-1 [&>option]:bg-slate-900 [&>option]:text-white"
+                  className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer border-none py-0 pr-1 [&_option]:bg-slate-900 [&_option]:text-white [&_optgroup]:bg-slate-900 [&_optgroup]:text-[#e07a1e]"
                   aria-label="Select District"
                 >
-                  <option value="all">All Districts</option>
-                  {KERALA_DISTRICTS.map((dist) => (
-                    <option key={dist.en} value={dist.en}>
-                      {dist[language] || dist.en}
-                    </option>
-                  ))}
+                  <option value="all" className="bg-slate-900 text-white font-bold">
+                    {selectedState === "kerala" ? "All Districts in Kerala (14)" : selectedState === "karnataka" ? "All Districts in Karnataka (31)" : "All Districts (45)"}
+                  </option>
+                  {(selectedState === "kerala" || selectedState === "all") && (
+                    <optgroup label="🌴 Kerala Districts (14)" className="bg-slate-900 text-[#e07a1e] font-bold">
+                      {KERALA_DISTRICTS_LIST.map((dist) => (
+                        <option key={dist.id} value={dist.en} className="bg-slate-900 text-white font-medium">
+                          {dist.en} {language === "ml" && dist.ml ? `(${dist.ml})` : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {(selectedState === "karnataka" || selectedState === "all") && (
+                    <optgroup label="🏰 Karnataka Districts (31)" className="bg-slate-900 text-[#e07a1e] font-bold">
+                      {KARNATAKA_DISTRICTS_LIST.map((dist) => (
+                        <option key={dist.id} value={dist.en} className="bg-slate-900 text-white font-medium">
+                          {dist.en} ({dist.kn})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
 
-              <div className="location-select flex items-center gap-1 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0">
-                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              {/* Locality Selector */}
+              <div className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 rounded-xl px-2.5 py-2 text-xs text-white transition shrink-0 shadow-2xs">
+                <MapPin className="w-3.5 h-3.5 text-[#e07a1e] shrink-0" />
                 <select
                   value={selectedLocality}
                   onChange={(e) => setSelectedLocality(e.target.value)}
-                  className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer border-none py-0 pr-1 [&>option]:bg-slate-900 [&>option]:text-white max-w-[170px] truncate"
+                  className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer border-none py-0 pr-1 [&_option]:bg-slate-900 [&_option]:text-white [&_optgroup]:bg-slate-900 [&_optgroup]:text-[#e07a1e] max-w-[170px] truncate"
                   aria-label="Select Locality or Panchayat"
                 >
-                  <option value="all">All Places in {selectedDistrict === "all" ? "Kerala (941 Panchayats)" : selectedDistrict}</option>
+                  <option value="all" className="bg-slate-900 text-white font-bold">
+                    All Places in {selectedDistrict === "all" ? (selectedState === "kerala" ? "Kerala" : selectedState === "karnataka" ? "Karnataka" : "All Districts") : selectedDistrict}
+                  </option>
                   {selectedDistrict === "all" ? (
-                    KERALA_DISTRICTS_LIST.flatMap((d) =>
-                      (KERALA_PANCHAYATS_BY_DISTRICT[d.en] || []).map((p) => (
-                        <option key={`${d.en}_${p.en}`} value={p.en}>
-                          {p.en}{language === "ml" && p.ml ? ` (${p.ml})` : language === "hi" && p.hi ? ` (${p.hi})` : language === "te" && p.te ? ` (${p.te})` : ""} &middot; {d.en}
-                        </option>
-                      ))
-                    )
+                    <>
+                      {(selectedState === "kerala" || selectedState === "all") &&
+                        KERALA_DISTRICTS_LIST.flatMap((d) =>
+                          (KERALA_PANCHAYATS_BY_DISTRICT[d.en] || []).map((p) => (
+                            <option key={`ke_${d.en}_${p.en}`} value={p.en} className="bg-slate-900 text-white">
+                              {p.en}{language === "ml" && p.ml ? ` (${p.ml})` : ""} &middot; {d.en} (KL)
+                            </option>
+                          ))
+                        )}
+                      {(selectedState === "karnataka" || selectedState === "all") &&
+                        KARNATAKA_DISTRICTS_LIST.flatMap((d) =>
+                          (KARNATAKA_PANCHAYATS_BY_DISTRICT[d.en] || []).map((p) => (
+                            <option key={`ka_${d.en}_${p.en}`} value={p.en} className="bg-slate-900 text-white">
+                              {p.en}{p.kn ? ` (${p.kn})` : ""} &middot; {d.en} (KA)
+                            </option>
+                          ))
+                        )}
+                    </>
                   ) : KERALA_PANCHAYATS_BY_DISTRICT[selectedDistrict] ? (
                     KERALA_PANCHAYATS_BY_DISTRICT[selectedDistrict].map((p) => (
-                      <option key={p.en} value={p.en}>
+                      <option key={p.en} value={p.en} className="bg-slate-900 text-white">
                         {p.en}{language === "ml" && p.ml ? ` (${p.ml})` : language === "hi" && p.hi ? ` (${p.hi})` : language === "te" && p.te ? ` (${p.te})` : ""}
+                      </option>
+                    ))
+                  ) : KARNATAKA_PANCHAYATS_BY_DISTRICT[selectedDistrict] ? (
+                    KARNATAKA_PANCHAYATS_BY_DISTRICT[selectedDistrict].map((p) => (
+                      <option key={p.en} value={p.en} className="bg-slate-900 text-white">
+                        {p.en}{p.kn ? ` (${p.kn})` : ""}
                       </option>
                     ))
                   ) : (
                     (LOCALITIES_EN[selectedDistrict] || []).map((loc) => (
-                      <option key={loc} value={loc}>
+                      <option key={loc} value={loc} className="bg-slate-900 text-white">
                         {loc}
                       </option>
                     ))
@@ -1692,17 +1820,17 @@ Phone: ${service.phoneNumber}`;
             </div>
           </div>
 
-          {/* QOL #5: Popular Quick Topic Chips for Villagers */}
-          <div className="popular-topics flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1.5 pb-0.5 text-[11px] font-bold">
-            <span className="text-[10px] uppercase font-black text-emerald-200/80 shrink-0">Popular:</span>
+          {/* Popular Quick Topic Chips for Villagers */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-2 pb-1 text-[11px] font-bold">
+            <span className="text-[10px] font-mono tracking-widest text-slate-400 uppercase shrink-0 font-bold">POPULAR</span>
             {[
-              { label: "🌾 Farmer Schemes", query: "Krishi Bhavan" },
-              { label: "🪪 Income Cert", query: "Income Certificate" },
-              { label: "⚡ KSEB Power", query: "KSEB" },
-              { label: "💧 Water Supply", query: "Water Authority" },
-              { label: "🏥 Health Center", query: "Health Center" },
-              { label: "🚌 Bus Depot", query: "KSRTC" },
-              { label: "🏫 Anganwadi", query: "Anganwadi" }
+              { label: "Farmer Schemes", query: "Krishi Bhavan" },
+              { label: "Income Cert", query: "Income Certificate" },
+              { label: "KSEB Power", query: "KSEB" },
+              { label: "Water Supply", query: "Water Authority" },
+              { label: "Health Center", query: "Health Center" },
+              { label: "Bus Depot", query: "KSRTC" },
+              { label: "Anganwadi", query: "Anganwadi" }
             ].map((tag, idx) => (
               <button
                 key={idx}
@@ -1711,20 +1839,19 @@ Phone: ${service.phoneNumber}`;
                   setSearchQuery(tag.query);
                   saveRecentSearch(tag.query);
                 }}
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-2.5 py-1 rounded-full shrink-0 transition cursor-pointer active:scale-95"
+                className="bg-slate-800/80 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-3 py-1 rounded-lg shrink-0 transition cursor-pointer active:scale-95 text-xs font-medium"
               >
                 {tag.label}
               </button>
             ))}
           </div>
-          </>}
 
         </header>
 
         {
     /* View switcher container */
   }
-        <div className={`app-content-shell flex-1 flex flex-col min-h-0 bg-white ${isUiPending ? "is-pending" : ""}`} aria-busy={isUiPending}>
+        <div className={`app-content-shell flex-1 flex flex-col min-h-0 bg-[#f6f4ee] ${isUiPending ? "is-pending" : ""}`} aria-busy={isUiPending}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={currentTab}
@@ -1732,50 +1859,60 @@ Phone: ${service.phoneNumber}`;
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985, y: -8 }}
               transition={{ duration: shouldReduceMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="tab-surface flex-1 flex flex-col min-h-0 relative"
+              className="tab-surface flex-1 flex flex-col min-h-0 relative bg-[#f6f4ee]"
             >
           
-          {
-    /* Tab Content 1: Services Directory List */
-  }
+          {/* Tab Content 1: Services Directory List */}
           {currentTab === "services" && <>
-              {
-    /* Category Horizontal Filter Row */
-  }
-              <div className="category-strip flex items-center justify-between gap-2 px-3 sm:px-5 lg:px-6 py-1.5 border-b border-zinc-800/80 shrink-0 select-none sticky top-0 z-20" role="toolbar" aria-label="Filter and arrange services">
-                <div className="category-filter-scroll flex items-center gap-1.5 min-w-0 overflow-x-auto scrollbar-none">
-                  <div className="flex items-center gap-1 shrink-0 pr-1.5 border-r border-zinc-700/60 mr-0.5 text-emerald-400 font-extrabold text-[10px] uppercase tracking-wider">
+              {/* Category Horizontal Filter Row */}
+              <div className="category-strip flex items-center justify-between overflow-x-auto gap-2 px-3 sm:px-5 lg:px-6 py-2 border-b border-stone-200/80 bg-[#f2efe9] scrollbar-none shrink-0 select-none sticky top-0 z-20" role="toolbar" aria-label="Filter services by category">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0 pr-1.5 border-r border-stone-300 mr-0.5 text-[#c26111] font-black text-[10px] uppercase tracking-wider">
                     <Filter className="w-3 h-3" />
                     <span className="hidden xs:inline">Category</span>
                   </div>
                   {categoryOptions.map((cat) => {
                     const isActive = selectedCategory === cat.key;
+                    const hasContent = cat.count > 0;
                     return (
                       <button
                         key={cat.key}
                         onClick={() => chooseCategory(cat.key)}
                         aria-pressed={isActive}
-                        aria-label={`Show ${cat.label} services`}
-                        className={`category-pill ${isActive ? "is-active" : ""} flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap border shrink-0 active:scale-95`}
+                        aria-label={`Show ${cat.label} services (${cat.count} available in ${selectedState})`}
+                        className={`category-pill ${isActive ? "is-active bg-[#0e1626] text-white border-[#0e1626]" : "bg-white text-slate-700 border-stone-300/80 hover:bg-stone-100"} flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap border shrink-0 active:scale-95 cursor-pointer ${
+                          !hasContent ? "opacity-60 cursor-not-allowed" : ""
+                        }`}
                       >
                         {cat.icon}
                         <span className="font-label text-[11px] whitespace-nowrap">{cat.label}</span>
+                        <span
+                          className={`ml-0.5 text-[10px] font-black px-1.5 py-0.2 rounded-full transition-all ${
+                            isActive
+                              ? "bg-[#e07a1e] text-white"
+                              : hasContent
+                              ? "bg-amber-100 text-amber-900"
+                              : "bg-stone-200 text-stone-500"
+                          }`}
+                        >
+                          {cat.count}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
 
-                <div className="directory-view-actions flex items-center gap-1.5 sm:gap-2 shrink-0 pl-2 border-l border-zinc-300/80 dark:border-zinc-700/60 ml-auto">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pl-2 border-l border-stone-300 ml-auto">
                   <button
                     type="button"
                     onClick={() => setGroupByPlace((value) => !value)}
-                    className={`rail-action flex items-center gap-1 shrink-0 ${groupByPlace ? "is-active bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : ""}`}
+                    className={`rail-action flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-full text-xs font-bold border transition ${groupByPlace ? "is-active bg-[#0e1626] text-white border-[#0e1626]" : "bg-white text-slate-700 border-stone-300 hover:bg-stone-100"}`}
                     aria-pressed={groupByPlace}
                   >
                     <Building2 className="w-3.5 h-3.5" />
                     <span>Group by Place</span>
                   </button>
-                  <button type="button" onClick={() => setSortByProximity((value) => !value)} className={`rail-action shrink-0 ${sortByProximity ? "is-active" : ""}`} aria-pressed={sortByProximity}>Nearest first</button>
+                  <button type="button" onClick={() => setSortByProximity((value) => !value)} className={`rail-action shrink-0 px-2.5 py-1 rounded-full text-xs font-bold border transition ${sortByProximity ? "is-active bg-[#0e1626] text-white border-[#0e1626]" : "bg-white text-slate-700 border-stone-300 hover:bg-stone-100"}`} aria-pressed={sortByProximity}>Nearest first</button>
                   <button
                     type="button"
                     onClick={() => {
@@ -1785,18 +1922,9 @@ Phone: ${service.phoneNumber}`;
                       setSelectedLocality("Azhiyur");
                       setSortByProximity(false);
                     }}
-                    className="rail-action shrink-0"
+                    className="rail-action shrink-0 px-2.5 py-1 rounded-full text-xs font-bold border border-stone-300 bg-white text-slate-600 hover:bg-stone-100 transition"
                   >
                     Reset
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigateToTab("map")}
-                    className="view-mode-rail rail-action hidden sm:flex items-center gap-1 shrink-0"
-                    aria-label="Switch to map view"
-                  >
-                    <MapIcon className="w-3.5 h-3.5" />
-                    <span>Map view</span>
                   </button>
                 </div>
               </div>
@@ -1804,7 +1932,7 @@ Phone: ${service.phoneNumber}`;
               {
     /* Dynamic scrollable directory area */
   }
-              <div id="service-results" className={`service-observatory ${groupByPlace ? "is-grouped" : "is-flat"} flex-1 overflow-y-auto px-5 sm:px-6 lg:px-8 pt-2 sm:pt-3 pb-24 scrollbar-none`} tabIndex={-1}>
+              <div id="service-results" className="service-observatory flex-1 overflow-y-auto px-5 sm:px-6 lg:px-8 pt-2 sm:pt-3 pb-24 scrollbar-none" tabIndex={-1}>
                 {isUiPending ? (
                   <DirectorySkeleton />
                 ) : (
@@ -1812,7 +1940,9 @@ Phone: ${service.phoneNumber}`;
                     <div className="service-feed-heading flex justify-between items-end gap-4 px-1 mb-1">
                       <div>
                         <span className="service-feed-kicker">Directory results</span>
-                        <h3>Services near {selectedLocality === "all" ? selectedDistrict : selectedLocality}</h3>
+                        <h3>
+                          Services in {selectedLocality === "all" ? (selectedDistrict === "all" ? (selectedState === "karnataka" ? "Karnataka" : selectedState === "all" ? "All States (India)" : "Kerala") : `${selectedDistrict} District`) : selectedLocality}
+                        </h3>
                       </div>
                       <span className="service-feed-count">Showing {visibleServicesCount} of {filteredServices.length}</span>
                     </div>
@@ -1822,6 +1952,7 @@ Phone: ${service.phoneNumber}`;
                         groupByPlace ? (
                           groupedServicesByPlace.map((group) => {
                             const isCollapsed = collapsedPlaces[group.localityName];
+                            const isKarnataka = KARNATAKA_DISTRICTS_LIST.some((d) => d.en === group.districtName);
                             return (
                               <div key={group.localityName} className="place-group bg-emerald-950/5 border border-emerald-200/80 rounded-2xl p-3.5 sm:p-4 mb-4 shadow-2xs transition">
                                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-emerald-200/60">
@@ -1833,11 +1964,11 @@ Phone: ${service.phoneNumber}`;
                                       <h4 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
                                         <span>{group.localityName}</span>
                                         <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
-                                          {group.services.length} {group.services.length === 1 ? "service" : "services"}
+                                          {group.services.length} {group.services.length === 1 ? "person / service" : "people / services"}
                                         </span>
                                       </h4>
                                       <p className="text-[10px] text-slate-500 font-medium">
-                                        {group.districtName} District &middot; Kerala
+                                        {group.districtName} District &middot; {isKarnataka ? "Karnataka" : "Kerala"}
                                       </p>
                                     </div>
                                   </div>
@@ -1847,7 +1978,6 @@ Phone: ${service.phoneNumber}`;
                                     onClick={() => togglePlaceCollapse(group.localityName)}
                                     className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1 text-xs font-semibold"
                                     aria-label={`Toggle ${group.localityName}`}
-                                    aria-expanded={!isCollapsed}
                                   >
                                     <span className="text-[10px] hidden sm:inline">{isCollapsed ? "Expand" : "Collapse"}</span>
                                     {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
@@ -1890,19 +2020,7 @@ Phone: ${service.phoneNumber}`;
                                         >
                                           {primary.isEmergency && <div className="absolute top-0 bottom-0 left-0 w-1 bg-rose-500 rounded-l-xl" />}
 
-                                          <div
-                                            className="service-card-primary flex flex-row gap-3 sm:gap-4 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
-                                            role="button"
-                                            tabIndex={0}
-                                            aria-label={`Open details for ${displayTitle}`}
-                                            onClick={() => setSelectedDetailService(primary)}
-                                            onKeyDown={(event) => {
-                                              if (event.key === "Enter" || event.key === " ") {
-                                                event.preventDefault();
-                                                setSelectedDetailService(primary);
-                                              }
-                                            }}
-                                          >
+                                          <div className="flex flex-row gap-3 sm:gap-4 cursor-pointer" onClick={() => setSelectedDetailService(primary)}>
                                             <div className={`icon-tile w-12 h-12 lg:w-13 lg:h-13 flex items-center justify-center shrink-0 rounded-2xl ${getCategoryColor(primary.categoryKey)}`}>
                                               {getCustomizedIcon(primary)}
                                             </div>
@@ -2050,19 +2168,7 @@ Phone: ${service.phoneNumber}`;
                                 >
                                   {primary.isEmergency && <div className="absolute top-0 bottom-0 left-0 w-1 bg-rose-500 rounded-l-xl" />}
 
-                                  <div
-                                    className="service-card-primary flex flex-row gap-3 sm:gap-4 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label={`Open details for ${displayTitle}`}
-                                    onClick={() => setSelectedDetailService(primary)}
-                                    onKeyDown={(event) => {
-                                      if (event.key === "Enter" || event.key === " ") {
-                                        event.preventDefault();
-                                        setSelectedDetailService(primary);
-                                      }
-                                    }}
-                                  >
+                                  <div className="flex flex-row gap-3 sm:gap-4 cursor-pointer" onClick={() => setSelectedDetailService(primary)}>
                                     <div className={`icon-tile w-12 h-12 lg:w-13 lg:h-13 flex items-center justify-center shrink-0 rounded-2xl ${getCategoryColor(primary.categoryKey)}`}>
                                       {getCustomizedIcon(primary)}
                                     </div>
@@ -2213,8 +2319,9 @@ Phone: ${service.phoneNumber}`;
             <Suspense fallback={<DirectorySkeleton />}>
               <CertificateResolver
                 language={language}
-                selectedDistrict={selectedDistrict === "all" ? "Kozhikode" : selectedDistrict}
-                selectedLocality={selectedLocality === "all" ? "Azhiyur" : selectedLocality}
+                selectedDistrict={selectedDistrict === "all" ? (selectedState === "karnataka" ? "Dakshina Kannada" : "Kozhikode") : selectedDistrict}
+                selectedLocality={selectedLocality === "all" ? (selectedState === "karnataka" ? "Mangaluru" : "Azhiyur") : selectedLocality}
+                selectedState={selectedState}
                 onSelectPanchayat={(dist, panch) => {
                   setSelectedDistrict(dist);
                   setSelectedLocality(panch);
@@ -2261,7 +2368,7 @@ Phone: ${service.phoneNumber}`;
     placeholder="e.g. Primary Health Centre Subcenter"
     value={newTitle}
     onChange={(e) => setNewTitle(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
+    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
   />
                 </div>
 
@@ -2274,7 +2381,7 @@ Phone: ${service.phoneNumber}`;
     id="suggest-service-category"
     value={newCategory}
     onChange={(e) => setNewCategory(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 rounded-xl px-2 py-2 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
+    className="w-full bg-stone-50 border border-stone-300 text-slate-900 rounded-xl px-2 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
   >
                       <option value="health">{t.health || "Health"}</option>
                       <option value="water">{t.water || "Water"}</option>
@@ -2295,7 +2402,7 @@ Phone: ${service.phoneNumber}`;
     placeholder="+91 XXXXX XXXXX"
     value={newPhone}
     onChange={(e) => setNewPhone(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
+    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
   />
                   </div>
                 </div>
@@ -2311,7 +2418,7 @@ Phone: ${service.phoneNumber}`;
     placeholder="Describe what help, documents, or aids are provided here..."
     value={newDesc}
     onChange={(e) => setNewDesc(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-600 focus:bg-white resize-none leading-relaxed transition"
+    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white resize-none leading-relaxed transition"
   />
                 </div>
 
@@ -2326,7 +2433,7 @@ Phone: ${service.phoneNumber}`;
     placeholder="e.g. 9:00 AM - 4:00 PM"
     value={newHours}
     onChange={(e) => setNewHours(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
+    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
   />
                   </div>
                   <div>
@@ -2339,7 +2446,7 @@ Phone: ${service.phoneNumber}`;
     placeholder="e.g. Sister Lakshmi"
     value={newContact}
     onChange={(e) => setNewContact(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
+    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
   />
                   </div>
                 </div>
@@ -2357,7 +2464,7 @@ Phone: ${service.phoneNumber}`;
       const locals = LOCALITIES_EN[e.target.value] || [];
       setNewLocality(locals[0] || "");
     }}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 rounded-xl px-2 py-2 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
+    className="w-full bg-stone-50 border border-stone-300 text-slate-900 rounded-xl px-2 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
   >
                       {KERALA_DISTRICTS.map((d) => <option key={d.en} value={d.en}>{d.en}</option>)}
                     </select>
@@ -2370,7 +2477,7 @@ Phone: ${service.phoneNumber}`;
     id="suggest-service-locality"
     value={newLocality}
     onChange={(e) => setNewLocality(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 rounded-xl px-2 py-2 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
+    className="w-full bg-stone-50 border border-stone-300 text-slate-900 rounded-xl px-2 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
   >
                       {(LOCALITIES_EN[newDistrict] || []).map((loc) => <option key={loc} value={loc}>{loc}</option>)}
                     </select>
@@ -2387,7 +2494,7 @@ Phone: ${service.phoneNumber}`;
     placeholder="e.g. Opposite Local Library block"
     value={newLocation}
     onChange={(e) => setNewLocation(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
+    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
   />
                 </div>
 
@@ -2397,7 +2504,7 @@ Phone: ${service.phoneNumber}`;
     id="mobile-em-chk"
     checked={isEmergencyCheck}
     onChange={(e) => setIsEmergencyCheck(e.target.checked)}
-    className="w-4 h-4 bg-stone-100 border-stone-300 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+    className="w-4 h-4 bg-stone-100 border-stone-300 text-[#c26111] rounded focus:ring-[#c26111] cursor-pointer"
   />
                   <label htmlFor="mobile-em-chk" className="text-[10px] font-extrabold text-slate-700 select-none cursor-pointer uppercase tracking-wider">
                     Emergency 24/7 Service
@@ -2406,13 +2513,22 @@ Phone: ${service.phoneNumber}`;
 
                 <button
     type="submit"
-    className="w-full md:max-w-sm bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 px-4 rounded-xl transition mt-3 shadow-md uppercase tracking-wider text-[11px] md:col-span-2 cursor-pointer"
+    className="w-full md:max-w-sm bg-[#c26111] hover:bg-[#a8520c] text-white font-bold py-3 px-4 rounded-xl transition mt-3 shadow-md uppercase tracking-wider text-[11px] md:col-span-2 cursor-pointer"
   >
                   {t.submitBtn || "Submit to Local Directory"}
                 </button>
 
               </form>
             </div>}
+
+          {/* Tab Content: Grievance Tracker */}
+          {currentTab === "grievances" && (
+            <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-4 pb-24 bg-stone-50 scrollbar-none">
+              <Suspense fallback={<DirectorySkeleton />}>
+                <GrievanceTracker selectedState={selectedState} selectedDistrict={selectedDistrict} selectedLocality={selectedLocality} />
+              </Suspense>
+            </div>
+          )}
 
           {
     /* Tab Content 4: Profile / Diagnostic settings */
@@ -2438,8 +2554,6 @@ Phone: ${service.phoneNumber}`;
               </div>
 
               <div className="max-w-5xl mx-auto mt-4 space-y-6">
-
-              {/* 1. CITIZEN ACCOUNT / LOGIN & LOGOUT SECTION */}
               {currentUser ? (
                 /* LOGGED IN USER PROFILE CARD WITH LOGOUT BUTTON */
                 <div className="bg-white text-slate-900 rounded-2xl p-5 shadow-sm border border-stone-200/90 relative overflow-hidden">
@@ -2503,166 +2617,29 @@ Phone: ${service.phoneNumber}`;
                   </div>
                 </div>
               ) : (
-                /* LOGGED OUT LOGIN & REGISTRATION CARD - WHITE BACKGROUND */
-                <div className="bg-white text-slate-900 rounded-2xl p-5 shadow-sm border border-stone-200">
-                  <div className="flex items-center justify-between border-b border-stone-200 pb-3 mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
-                        <LogIn className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-classical text-base font-black text-slate-900 tracking-wide">
-                          Citizen & Panchayat Login{language === "ml" ? " (പൗര ലോഗിൻ)" : language === "hi" ? " (नागरिक और पंचायत लॉगिन)" : language === "te" ? " (పౌరుల లాగిన్)" : ""}
-                        </h4>
-                        <p className="text-[10px] text-slate-500 mt-0.5">
-                          Log in with your mobile number or Aadhaar card to track certificate applications and saved documents.
-                        </p>
-                      </div>
+                /* GUEST ACCOUNT PROFILE CARD */
+                <div className="bg-gradient-to-br from-amber-50/60 to-stone-50 text-slate-900 rounded-2xl p-5 shadow-sm border border-stone-200/90 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5 text-center sm:text-left">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-800 shrink-0 mx-auto sm:mx-0 shadow-2xs">
+                      <User className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-classical text-base font-black text-slate-900 tracking-wide">
+                        Browsing as Guest Citizen
+                      </h4>
+                      <p className="text-[11px] text-slate-600 mt-0.5 max-w-md">
+                        Sign in or register with Firebase Authentication to access your saved certificate vault, store documents, and track local Panchayat applications.
+                      </p>
                     </div>
                   </div>
-
-                  {/* Quick Demo One-Click Accounts */}
-                  <div className="mb-4 bg-stone-50/80 border border-stone-200 rounded-xl p-3">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 block mb-2">
-                      ⚡ Instant One-Click Login (Select Demo Citizen Profile):
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {DEMO_ACCOUNTS.map((acc, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleQuickDemoLogin(acc)}
-                          className="text-left bg-white hover:bg-emerald-50/70 border border-stone-200 hover:border-emerald-400/80 rounded-lg p-2.5 transition cursor-pointer group active:scale-95 shadow-2xs"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-900 group-hover:text-emerald-900">{acc.name}</span>
-                            <span className="text-[8px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded uppercase">{acc.roleBadge}</span>
-                          </div>
-                          <span className="text-[9px] text-slate-500 block mt-0.5">{acc.locality}, {acc.district}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Custom Form */}
-                  <div className="bg-stone-50/90 border border-stone-200 rounded-xl p-3.5 space-y-3">
-                    <div className="flex items-center justify-between border-b border-stone-200 pb-2 flex-wrap gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Or Log In With Custom Mobile / Aadhaar:</span>
-                      <div className="flex items-center gap-1 bg-stone-200/80 p-0.5 rounded-lg text-[9px] font-bold">
-                        <button
-                          type="button"
-                          onClick={() => { setLoginMethod("otp"); setOtpSent(false); }}
-                          className={`px-2.5 py-1 rounded-md transition cursor-pointer ${loginMethod === "otp" ? "bg-emerald-700 text-white shadow-2xs" : "text-slate-600 hover:text-slate-900"}`}
-                        >
-                          Mobile OTP
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setLoginMethod("aadhaar"); setOtpSent(false); }}
-                          className={`px-2.5 py-1 rounded-md transition cursor-pointer ${loginMethod === "aadhaar" ? "bg-emerald-700 text-white shadow-2xs" : "text-slate-600 hover:text-slate-900"}`}
-                        >
-                          Aadhaar e-KYC
-                        </button>
-                      </div>
-                    </div>
-
-                    {loginError && (
-                      <div className="bg-rose-50 border border-rose-200 text-rose-800 text-[10px] p-2 rounded-lg font-bold">
-                        ⚠️ {loginError}
-                      </div>
-                    )}
-
-                    {!otpSent ? (
-                      <form onSubmit={handleSendOtp} className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-[9px] text-slate-600 uppercase font-bold tracking-wider block mb-1">
-                              Your Full Name
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. Suresh Kumar"
-                              value={loginNameInput}
-                              onChange={(e) => setLoginNameInput(e.target.value)}
-                              className="w-full bg-white border border-stone-300 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-emerald-600"
-                            />
-                          </div>
-                          <div>
-                            {loginMethod === "otp" ? (
-                              <>
-                                <label className="text-[9px] text-slate-600 uppercase font-bold tracking-wider block mb-1">
-                                  10-Digit Mobile Number
-                                </label>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="bg-stone-100 border border-stone-300 text-slate-700 text-xs px-2 py-1.5 rounded-lg font-mono">+91</span>
-                                  <input
-                                    type="tel"
-                                    placeholder="94470 12345"
-                                    value={loginPhone}
-                                    onChange={(e) => setLoginPhone(e.target.value)}
-                                    className="w-full bg-white border border-stone-300 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none focus:border-emerald-600"
-                                  />
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <label className="text-[9px] text-slate-600 uppercase font-bold tracking-wider block mb-1">
-                                  12-Digit Aadhaar Number
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="1234 5678 9012"
-                                  value={loginAadhaar}
-                                  onChange={(e) => setLoginAadhaar(e.target.value)}
-                                  className="w-full bg-white border border-stone-300 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none focus:border-emerald-600"
-                                />
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end pt-1">
-                          <button
-                            type="submit"
-                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer active:scale-95 shadow-xs"
-                          >
-                            <Smartphone className="w-3.5 h-3.5" />
-                            <span>Send Demo OTP →</span>
-                          </button>
-                        </div>
-                      </form>
-                    ) : (
-                      <form onSubmit={handleVerifyAndLogin} className="space-y-3 animate-fade-in">
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-[10px] text-emerald-900 flex items-center justify-between">
-                          <span>OTP sent to {loginMethod === "otp" ? `+91 ${loginPhone}` : `Aadhaar ending in ${loginAadhaar.slice(-4)}`}.</span>
-                          <span className="font-mono bg-emerald-700 text-white px-1.5 py-0.5 rounded font-bold">Demo OTP: 1947</span>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1">
-                            <label className="text-[9px] text-slate-600 uppercase font-bold tracking-wider block mb-1">
-                              Enter 4-Digit OTP Code
-                            </label>
-                            <input
-                              type="text"
-                              maxLength={4}
-                              placeholder="1947"
-                              value={otpInput}
-                              onChange={(e) => setOtpInput(e.target.value)}
-                              className="w-full bg-white border border-stone-300 focus:border-emerald-600 text-slate-900 font-mono text-center text-base tracking-[0.3em] font-black rounded-lg py-1.5 outline-none shadow-2xs"
-                            />
-                          </div>
-                          <button
-                            type="submit"
-                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer active:scale-95 mt-5 shadow-xs"
-                          >
-                            <LogIn className="w-4 h-4" />
-                            <span>Verify & Log In</span>
-                          </button>
-                        </div>
-                      </form>
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowStartLoginModal(true)}
+                    className="bg-emerald-800 hover:bg-emerald-900 text-white font-black px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer active:scale-95 shadow-xs shrink-0"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Log In / Sign Up</span>
+                  </button>
                 </div>
               )}
 
@@ -3151,6 +3128,18 @@ Phone: ${service.phoneNumber}`;
         </AnimatePresence>
 
         <AnimatePresence>
+          <FirebaseAuthModal
+            isOpen={showStartLoginModal}
+            onClose={() => setShowStartLoginModal(false)}
+            selectedDistrict={selectedDistrict}
+            selectedLocality={selectedLocality}
+            setSuccessToast={setSuccessToast}
+            districtsList={KERALA_DISTRICTS_LIST}
+            panchayatsByDistrict={KERALA_PANCHAYATS_BY_DISTRICT}
+          />
+        </AnimatePresence>
+
+        <AnimatePresence>
           {reportService && (
             <div
               className="fixed inset-0 z-[60] overflow-y-auto bg-black/50 backdrop-blur-xs p-4 flex justify-center items-center min-h-screen my-0 cursor-pointer"
@@ -3214,17 +3203,17 @@ Phone: ${service.phoneNumber}`;
             whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
             onClick={() => navigateToTab(currentTab === "services" ? "map" : "services")}
             aria-label={currentTab === "services" ? "Switch to map view" : "Switch to list view"}
-            className={`view-toggle-button ${currentTab === "services" ? "is-list-view" : "is-map-view"} fixed sm:absolute bottom-16 sm:bottom-18 right-4 sm:right-6 z-40 bg-emerald-800 hover:bg-emerald-900 text-white font-black px-4 py-2.5 rounded-full shadow-xl hover:shadow-2xl border border-emerald-600/50 flex items-center gap-2 text-xs uppercase tracking-wider backdrop-blur-md cursor-pointer transition-colors active:scale-95`}
+            className="fixed sm:absolute bottom-16 sm:bottom-18 right-4 sm:right-6 z-40 bg-[#0e1626] hover:bg-[#182338] text-white font-black px-4 py-2.5 rounded-full shadow-xl hover:shadow-2xl border border-slate-700 flex items-center gap-2 text-xs uppercase tracking-wider backdrop-blur-md cursor-pointer transition-colors active:scale-95"
           >
             {currentTab === "services" ? (
               <>
-                <MapIcon className="w-4 h-4 text-emerald-300" />
-                <span className="view-toggle-label">Map View</span>
+                <MapIcon className="w-4 h-4 text-amber-400" />
+                <span>Map View</span>
               </>
             ) : (
               <>
-                <List className="w-4 h-4 text-emerald-300" />
-                <span className="view-toggle-label">List View</span>
+                <List className="w-4 h-4 text-amber-400" />
+                <span>List View</span>
               </>
             )}
           </motion.button>
@@ -3235,11 +3224,12 @@ Phone: ${service.phoneNumber}`;
   }
         <div className="bottom-dock app-dock absolute bottom-0 inset-x-0 border-t border-stone-200 flex items-center justify-around z-40 px-1 sm:px-2 select-none pb-safe bg-white/95 backdrop-blur-md" role="tablist" aria-label="Main app tabs">
           {[
-    { id: "services", label: ui.services, icon: <Building2 className="w-5 h-5" /> },
-    { id: "resolver", label: ui.resolver || "Resolver", icon: <FileCheck2 className="w-5 h-5" /> },
-    { id: "map", label: ui.map, icon: <Compass className="w-5 h-5" /> },
-    { id: "suggest", label: ui.suggest, icon: <Plus className="w-5 h-5" /> },
-    { id: "profile", label: ui.profile, icon: <User className="w-5 h-5" /> }
+    { id: "services", label: ui.services || "Services", icon: <Building2 className="w-5 h-5" /> },
+    { id: "resolver", label: "Certificates", icon: <FileCheck2 className="w-5 h-5" /> },
+    { id: "grievances", label: "Grievance", icon: <ShieldAlert className="w-5 h-5" /> },
+    { id: "map", label: ui.map || "Map", icon: <Compass className="w-5 h-5" /> },
+    { id: "suggest", label: ui.suggest || "Suggest", icon: <Plus className="w-5 h-5" /> },
+    { id: "profile", label: ui.profile || "Profile", icon: <User className="w-5 h-5" /> }
   ].map((tab) => {
     const isActive = currentTab === tab.id;
     return <button
@@ -3250,12 +3240,12 @@ Phone: ${service.phoneNumber}`;
       aria-selected={isActive}
       aria-current={isActive ? "page" : undefined}
       aria-label={`Open ${tab.label}`}
-      className={`dock-button ${isActive ? "is-active" : ""} relative flex flex-col items-center justify-center gap-1 flex-1 py-1.5 transition cursor-pointer select-none active:scale-95 ${isActive ? "text-emerald-700 font-bold" : "text-slate-500 hover:text-slate-800"}`}
+      className={`dock-button ${isActive ? "is-active" : ""} relative flex flex-col items-center justify-center gap-1 flex-1 py-1.5 transition cursor-pointer select-none active:scale-95 ${isActive ? "text-[#c26111] font-bold" : "text-slate-500 hover:text-slate-800"}`}
     >
                 {isActive && (
                   <motion.div
                     layoutId="activeDockTab"
-                    className="absolute top-0 w-8 h-0.5 bg-emerald-600 rounded-full shadow-[0_0_8px_rgba(5,150,105,0.4)] lg:hidden"
+                    className="absolute top-0 w-8 h-0.5 bg-[#c26111] rounded-full shadow-[0_0_8px_rgba(194,97,17,0.4)] lg:hidden"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}

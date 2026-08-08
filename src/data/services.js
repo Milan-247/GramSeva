@@ -1,4 +1,7 @@
 import { KERALA_DISTRICTS_LIST, KERALA_PANCHAYATS_BY_DISTRICT } from "./keralaPanchayatsData.js";
+import { KARNATAKA_DISTRICTS_LIST, KARNATAKA_PANCHAYATS_BY_DISTRICT } from "./karnatakaPanchayatsData.js";
+import { TAMILNADU_DISTRICTS_LIST, TAMILNADU_PANCHAYATS_BY_DISTRICT } from "./tamilNaduPanchayatsData.js";
+import { ANDHRAPRADESH_DISTRICTS_LIST, ANDHRAPRADESH_PANCHAYATS_BY_DISTRICT } from "./andhraPradeshPanchayatsData.js";
 
 const SUPPORTED_LANGUAGES = [
   { code: "ml", name: "Malayalam", nativeName: "\u0D2E\u0D32\u0D2F\u0D3E\u0D33\u0D02", flag: "\u{1F334}" },
@@ -1280,13 +1283,376 @@ function generateRemainingServices() {
     });
   });
 
+  // Generate 4 distinct services per category for Karnataka Panchayats
+  const KARNATAKA_TEMPLATES = [
+    // Health (4 services)
+    {
+      subId: "phc-1",
+      categoryKey: "health",
+      catEn: "Health", catKn: "ಆರೋಗ್ಯ",
+      titleEn: (pncEn) => `${pncEn} Primary Health Centre (PHC) & Ayushman Arogya Mandir`,
+      titleKn: (pncKn) => `${pncKn} ಪ್ರಾಥಮಿಕ ಆರೋಗ್ಯ ಕೇಂದ್ರ (PHC)`,
+      descEn: (pncEn) => `Primary family health centre serving ${pncEn} Panchayat. 24/7 OP care, Ayushman Bharat Arogya Karnataka e-KYC, free essential medicines & vaccinations.`,
+      descKn: (pncKn) => `${pncKn} ಪಂಚಾಯತ್ ಉಚಿತ ಆರೋಗ್ಯ ಸೇವೆಗಳು, ತುರ್ತು ಚಿಕಿತ್ಸೆ, ಉಚಿತ ಔಷಧಿ ವಿತರಣೆ ಮತ್ತು ಆಯುಷ್ಮಾನ್ ಭಾರತ್ ಕಾರ್ಡ್.`,
+      hours: "24/7 OPD & Emergency",
+      isEmergency: true
+    },
+    {
+      subId: "vet-2",
+      categoryKey: "health",
+      catEn: "Health", catKn: "ಆರೋಗ್ಯ",
+      titleEn: (pncEn) => `Govt Veterinary Dispensary & Livestock Hospital - ${pncEn}`,
+      titleKn: (pncKn) => `ಸರ್ಕಾರಿ ಪಶು ವೈದ್ಯಕೀಯ ಚಿಕಿತ್ಸಾಲಯ - ${pncKn}`,
+      descEn: (pncEn) => `Cattle vaccination, artificial insemination, KMF dairy farmer incentives & livestock disease prevention for ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} ಪಶು ಸಂಗೋಪನೆ, ಉಚಿತ ಲಸಿಕೆ, ಕೃತಕ ಗರ್ಭಧಾರಣೆ ಮತ್ತು ಹಾಲಿನ ಪ್ರೋತ್ಸಾಹಧನ ಸೇವೆ.`,
+      hours: "9:00 AM - 5:00 PM",
+      isEmergency: false
+    },
+    {
+      subId: "namma-3",
+      categoryKey: "health",
+      catEn: "Health", catKn: "ಆರೋಗ್ಯ",
+      titleEn: (pncEn) => `Namma Clinic & Community Health Wellness Centre - ${pncEn}`,
+      titleKn: (pncKn) => `ನಮ್ಮ ಕ್ಲಿನಿಕ್ ಮತ್ತು ಆರೋಗ್ಯ ಕ್ಷೇಮ ಕೇಂದ್ರ - ${pncKn}`,
+      descEn: (pncEn) => `Free health screening, blood & lab testing, diabetes care and maternal consultation for ${pncEn} villagers.`,
+      descKn: (pncKn) => `${pncKn} ತಪಾಸಣೆ, ಉಚಿತ ರಕ್ತ ಪರೀಕ್ಷೆ ಹಾಗೂ ಮಾತೃ ಆರೋಗ್ಯ ಸಲಹಾ ಕೇಂದ್ರ.`,
+      hours: "9:00 AM - 4:30 PM",
+      isEmergency: false
+    },
+    {
+      subId: "asha-4",
+      categoryKey: "health",
+      catEn: "Health", catKn: "ಆರೋಗ್ಯ",
+      titleEn: (pncEn) => `ASHA Worker & Child Vaccination Outreach Unit - ${pncEn}`,
+      titleKn: (pncKn) => `ಆಶಾ ಕಾರ್ಯಕರ್ತರ ಮತ್ತು ತಾಯಿ-ಮಗು ಆರೋಗ್ಯ ಸೇವಾ ಕೇಂದ್ರ - ${pncKn}`,
+      descEn: (pncEn) => `Pulse polio, maternal nutrition kits, immunisation tracking and 108 emergency ambulance dispatch for ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} ಆಶಾ ಸೇವಾ ಕೇಂದ್ರ, ಲಸಿಕಾ ಅಭಿಯಾನ ಮತ್ತು 108 ತುರ್ತು ಆಂಬುಲೆನ್ಸ್ ಮಾರ್ಗದರ್ಶನ.`,
+      hours: "8:30 AM - 4:00 PM",
+      isEmergency: true
+    },
+
+    // Education (4 services)
+    {
+      subId: "ghps-1",
+      categoryKey: "education",
+      catEn: "Education", catKn: "ಶಿಕ್ಷಣ",
+      titleEn: (pncEn) => `Govt Higher Primary School (GHPS) - ${pncEn}`,
+      titleKn: (pncKn) => `ಸರ್ಕಾರಿ ಹಿರಿಯ ಪ್ರಾಥಮಿಕ ಶಾಲೆ (GHPS) - ${pncKn}`,
+      descEn: (pncEn) => `Classes 1 to 8, Ksheera Bhagya milk scheme, free uniforms, textbooks & SSP scholarship guidance for ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} ಕ್ಷೀರಭಾಗ್ಯ ಯೋಜನೆ, ಉಚಿತ ಪಠ್ಯಪುಸ್ತಕ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿವೇತನ ಮಾರ್ಗದರ್ಶನ.`,
+      hours: "9:30 AM - 4:00 PM",
+      isEmergency: false
+    },
+    {
+      subId: "puc-2",
+      categoryKey: "education",
+      catEn: "Education", catKn: "ಶಿಕ್ಷಣ",
+      titleEn: (pncEn) => `Govt High School & Junior College Guidance Desk - ${pncEn}`,
+      titleKn: (pncKn) => `ಸರ್ಕಾರಿ ಪ್ರೌಢಶಾಲೆ ಮತ್ತು ಪಿಯು ಕಾಲೇಜು ಮಾರ್ಗದರ್ಶನ ಕೇಂದ್ರ - ${pncKn}`,
+      descEn: (pncEn) => `Secondary & PU education (Classes 8-12), State Scholarship Portal (SSP) registration & career counseling.`,
+      descKn: (pncKn) => `${pncKn} ಪ್ರೌಢಶಾಲೆ, ಎಸ್‌ಎಸ್‌ಪಿ ಸ್ಕಾಲರ್‌ಶಿಪ್ ಅರ್ಜಿ ಸಲ್ಲಿಕೆ ಮತ್ತು ವೃತ್ತಿ ಮಾರ್ಗದರ್ಶನ.`,
+      hours: "9:00 AM - 4:30 PM",
+      isEmergency: false
+    },
+    {
+      subId: "anganwadi-3",
+      categoryKey: "education",
+      catEn: "Education", catKn: "ಶಿಕ್ಷಣ",
+      titleEn: (pncEn) => `Anganwadi Centre & Child Growth Monitoring - ${pncEn}`,
+      titleKn: (pncKn) => `ಅಂಗನವಾಡಿ ಮತ್ತು ಮಕ್ಕಳ ಪೋಷಣಾ ಕೇಂದ್ರ - ${pncKn}`,
+      descEn: (pncEn) => `Poshan Abhiyaan nutritional food distribution, pre-school early education & Matru Vandana scheme for ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} ಪೌಷ್ಟಿಕ ಆಹಾರ ವಿತರಣೆ, ಪೂರ್ವ ಪ್ರಾಥಮಿಕ ಶಿಕ್ಷಣ ಮತ್ತು ಮಾತೃ ವಂದನಾ ಯೋಜನೆ.`,
+      hours: "9:00 AM - 4:00 PM",
+      isEmergency: false
+    },
+    {
+      subId: "digi-lib-4",
+      categoryKey: "education",
+      catEn: "Education", catKn: "ಶಿಕ್ಷಣ",
+      titleEn: (pncEn) => `Grama Panchayat Digital Library & Computer Centre - ${pncEn}`,
+      titleKn: (pncKn) => `ಗ್ರಾಮ ಪಂಚಾಯತಿ ಡಿಜಿಟಲ್ ಗ್ರಂಥಾಲಯ - ${pncKn}`,
+      descEn: (pncEn) => `Free Wi-Fi, e-books, competitive examination preparation & digital computer literacy for youth in ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} ಉಚಿತ ಡಿಜಿಟಲ್ ಗ್ರಂಥಾಲಯ, ಇ-ಪುಸ್ತಕಗಳು ಮತ್ತು ಸ್ಪರ್ಧಾತ್ಮಕ ಪರೀಕ್ಷೆ ತರಬೇತಿ.`,
+      hours: "8:00 AM - 8:00 PM",
+      isEmergency: false
+    },
+
+    // Government / Administration (4 services)
+    {
+      subId: "grama-one-1",
+      categoryKey: "government",
+      catEn: "Government", catKn: "ಸರ್ಕಾರಿ ಸೇವೆಗಳು",
+      titleEn: (pncEn) => `Grama One / Bapu Seva Kendra - ${pncEn}`,
+      titleKn: (pncKn) => `ಗ್ರಾಂ ಒನ್ / ಬಾಪು ಸೇವಾ ಕೇಂದ್ರ - ${pncKn}`,
+      descEn: (pncEn) => `Grama One citizen portal, Seva Sindhu certificates, Form 9/11A E-Swathu, RTC Pahani & Gruha Lakshmi scheme for ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} ಪಂಚಾಯತ್ ಇ-ಸ್ವತ್ತು ಫಾರ್ಮ್ 9/11A, ಜಾತಿ/ಆದಾಯ ಪ್ರಮಾಣಪತ್ರ, ಪಹಣಿ ಮತ್ತು ಸೇವಾ ಸಿಂಧು ಸೇವೆಗಳು.`,
+      hours: "9:00 AM - 6:00 PM",
+      isEmergency: false
+    },
+    {
+      subId: "pdo-office-2",
+      categoryKey: "government",
+      catEn: "Government", catKn: "ಸರ್ಕಾರಿ ಸೇವೆಗಳು",
+      titleEn: (pncEn) => `Office of Panchayat Development Officer (PDO) - ${pncEn}`,
+      titleKn: (pncKn) => `ಪಂಚಾಯತ್ ಅಭಿವೃದ್ಧಿ ಅಧಿಕಾರಿ (PDO) ಕಚೇರಿ - ${pncKn}`,
+      descEn: (pncEn) => `Property tax (Form 9/11A), trade licenses, MGNREGA job cards, building construction permits & Gram Sabha.`,
+      descKn: (pncKn) => `${pncKn} ಆಸ್ತಿ ತೆರಿಗೆ ಪಾವತಿ, ವ್ಯಾಪಾರ ಪರವಾನಗಿ, ಉದ್ಯೋಗ ಖಾತ್ರಿ ಕಾರ್ಡ್ ಮತ್ತು ಗ್ರಾಮ ಸಭಾ ಕುಂದುಕೊರತೆಗಳು.`,
+      hours: "10:00 AM - 5:30 PM",
+      isEmergency: false
+    },
+    {
+      subId: "nada-kacheri-3",
+      categoryKey: "government",
+      catEn: "Government", catKn: "ಸರ್ಕಾರಿ ಸೇವೆಗಳು",
+      titleEn: (pncEn) => `Nada Kacheri Revenue Inspector Office - ${pncEn}`,
+      titleKn: (pncKn) => `ನಾಡ ಕಚೇರಿ ಕಂದಾಯ ಕಚೇರಿ - ${pncKn}`,
+      descEn: (pncEn) => `Revenue land records, Caste & Income certificates, Sandhya Suraksha pension, Widow pension & domicile verification.`,
+      descKn: (pncKn) => `${pncKn} ಕಂದಾಯ ದಾಖಲೆಗಳು, ಆಸ್ತಿ ಬದಲಾವಣೆ, ಪಿಂಚಣಿ ಯೋಜನೆಗಳು ಹಾಗೂ ಸ್ಥಳೀಯ ದೃಢೀಕರಣ.`,
+      hours: "10:00 AM - 5:30 PM",
+      isEmergency: false
+    },
+    {
+      subId: "escom-4",
+      categoryKey: "government",
+      catEn: "Government", catKn: "ಸರ್ಕಾರಿ ಸೇವೆಗಳು",
+      titleEn: (pncEn) => `Electricity Section Office (ESCOM) - ${pncEn}`,
+      titleKn: (pncKn) => `ವಿದ್ಯುತ್ ಸರಬರಾಜು ಕಚೇರಿ (ಎಸ್ಕಾಂ) - ${pncKn}`,
+      descEn: (pncEn) => `Gruha Jyothi 200 units free power scheme, new connection processing, transformer repair & power billing.`,
+      descKn: (pncKn) => `${pncKn} ಗೃಹ ಜ್ಯೋತಿ ಉಚಿತ ವಿದ್ಯುತ್ ಯೋಜನೆ, ಹೊಸ ಕನೆಕ್ಷನ್ ಮತ್ತು ವಿದ್ಯುತ್ ದೂರು ಕೇಂದ್ರ.`,
+      hours: "24/7 Helpline & Faults",
+      isEmergency: true
+    },
+
+    // Water (4 services)
+    {
+      subId: "water-sub-1",
+      categoryKey: "water",
+      catEn: "Water", catKn: "ಕುಡಿಯುವ ನೀರು",
+      titleEn: (pncEn) => `Grama Panchayat Water Supply Substation - ${pncEn}`,
+      titleKn: (pncKn) => `ಕುಡಿಯುವ ನೀರು ಸರಬರಾಜು ಘಟಕ - ${pncKn}`,
+      descEn: (pncEn) => `Public drinking water distribution, Jal Jeevan Mission tap connections & pipe maintenance for ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} ಪಂಚಾಯತ್ ಜಲ ಜೀವನ್ ಮಿಷನ್ ಕುಡಿಯುವ ನೀರಿನ ಪೈಪ್‌ಲೈನ್ ಮತ್ತು ಟ್ಯಾಂಕರ್ ಸೇವೆ.`,
+      hours: "6:00 AM - 8:00 PM",
+      isEmergency: false
+    },
+    {
+      subId: "rwss-2",
+      categoryKey: "water",
+      catEn: "Water", catKn: "ಕುಡಿಯುವ ನೀರು",
+      titleEn: (pncEn) => `Rural Water Supply & Sanitation (RWSS) Wing - ${pncEn}`,
+      titleKn: (pncKn) => `ಗ್ರಾಮೀಣ ಕುಡಿಯುವ ನೀರು ಮತ್ತು ನೈರ್ಮಲ್ಯ ವಿಭಾಗ - ${pncKn}`,
+      descEn: (pncEn) => `Water quality laboratory testing, overhead tank chlorination & village drainage sanitation engineering for ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} ನೀರಿನ ಗುಣಮಟ್ಟ ಪರೀಕ್ಷೆ, ಟ್ಯಾಂಕ್ ಶುಚಿಗೊಳಿಸುವಿಕೆ ಮತ್ತು ಗ್ರಾಮ ನೈರ್ಮಲ್ಯ ಯೋಜನೆ.`,
+      hours: "9:00 AM - 5:00 PM",
+      isEmergency: false
+    },
+    {
+      subId: "ro-plant-3",
+      categoryKey: "water",
+      catEn: "Water", catKn: "ಕುಡಿಯುವ ನೀರು",
+      titleEn: (pncEn) => `Shuddha Kudiyuva Neeru Pure RO Water Unit - ${pncEn}`,
+      titleKn: (pncKn) => `ಶುದ್ಧ ಕುಡಿಯುವ ನೀರಿನ ಆರ್‌ಒ ಘಟಕ - ${pncKn}`,
+      descEn: (pncEn) => `24/7 coin and smart card operated pure reverse osmosis drinking water dispensing plant for ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} 24 ಗಂಟೆಯು ಕಾರ್ಯನಿರ್ವಹಿಸುವ ಶುದ್ಧ ಆರ್‌ಒ ಕುಡಿಯುವ ನೀರಿನ ಪ್ಲಾಂಟ್.`,
+      hours: "24/7 Open",
+      isEmergency: false
+    },
+    {
+      subId: "water-tanker-4",
+      categoryKey: "water",
+      catEn: "Water", catKn: "ಕುಡಿಯುವ ನೀರು",
+      titleEn: (pncEn) => `Emergency Water Tanker & Borewell Repair Cell - ${pncEn}`,
+      titleKn: (pncKn) => `ತುರ್ತು ನೀರಿನ ಟ್ಯಾಂಕರ್ ಮತ್ತು ಬೋರ್‌ವೆಲ್ ದುರಸ್ತಿ ಕೋಶ - ${pncKn}`,
+      descEn: (pncEn) => `Drought relief drinking water supply helpline, motor pump repair & pipeline leakage breakdown cell.`,
+      descKn: (pncKn) => `${pncKn} ಕುಡಿಯುವ ನೀರಿನ ಟ್ಯಾಂಕರ್ ಸರಬರಾಜು ಮತ್ತು ಪೈಪ್‌ಲೈನ್ ಪಂಪ್ ದುರಸ್ತಿ ಸೇವೆ.`,
+      hours: "24/7 Emergency Service",
+      isEmergency: true
+    },
+
+    // Agriculture (4 services)
+    {
+      subId: "rsk-1",
+      categoryKey: "agriculture",
+      catEn: "Agriculture", catKn: "ಕೃಷಿ",
+      titleEn: (pncEn) => `Raitha Seva Kendra (RSK) - ${pncEn}`,
+      titleKn: (pncKn) => `ರೈತ ಸೇವಾ ಕೇಂದ್ರ (RSK) - ${pncKn}`,
+      descEn: (pncEn) => `Raitha Samparka Kendra, PM-Kisan FID registration, seed subsidy, crop loss compensation & fertilizer booking.`,
+      descKn: (pncKn) => `${pncKn} ಪಿಎಂ-ಕಿಸಾನ್, ಬೆಳೆ ಪರಿಹಾರ, ರಸಗೊಬ್ಬರ ಸಬ್ಸಿಡಿ ಮತ್ತು ಮಣ್ಣು ಪರೀಕ್ಷೆ ಸೇವೆಗಳು.`,
+      hours: "9:00 AM - 5:00 PM",
+      isEmergency: false
+    },
+    {
+      subId: "hopcoms-2",
+      categoryKey: "agriculture",
+      catEn: "Agriculture", catKn: "ಕೃಷಿ",
+      titleEn: (pncEn) => `HOPCOMS Farmer Fruit & Vegetable Procurement Depot - ${pncEn}`,
+      titleKn: (pncKn) => `ಹಾಪ್‌ಕಾಮ್ಸ್ ತರಕಾರಿ ಹಾಗೂ ಹಣ್ಣುಗಳ ಸಂಗ್ರಹಣಾ ಕೇಂದ್ರ - ${pncKn}`,
+      descEn: (pncEn) => `Direct farm produce buying, fair weight assurance, horticulture crop subsidies & cold chain transport for ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} ತೋಟಗಾರಿಕೆ ಬೆಳೆಗಳ ನೇರ ಖರೀದಿ, ನ್ಯಾಯಯುತ ಬೆಲೆ ಹಾಗೂ ಶೀತಲೀಕರಣ ವ್ಯವಸ್ಥೆ.`,
+      hours: "7:00 AM - 3:00 PM",
+      isEmergency: false
+    },
+    {
+      subId: "soil-lab-3",
+      categoryKey: "agriculture",
+      catEn: "Agriculture", catKn: "ಕೃಷಿ",
+      titleEn: (pncEn) => `Soil Health & Agricultural Advisory Extension Centre - ${pncEn}`,
+      titleKn: (pncKn) => `ಮಣ್ಣು ಪರೀಕ್ಷೆ ಮತ್ತು ಕೃಷಿ ವಿಸ್ತರಣಾ ಕೇಂದ್ರ - ${pncKn}`,
+      descEn: (pncEn) => `Soil nutrient testing, organic farming certification, micro-irrigation subsidy & pest management for ${pncEn}.`,
+      descKn: (pncKn) => `${pncKn} ಉಚಿತ ಮಣ್ಣು ಪರೀಕ್ಷಾ ಕಾರ್ಡ್, ಸಾವಯವ ಕೃಷಿ ಉತ್ತೇಜನ ಮತ್ತು ಹನಿ ನೀರಾವರಿ ಸಬ್ಸಿಡಿ.`,
+      hours: "9:30 AM - 4:30 PM",
+      isEmergency: false
+    },
+    {
+      subId: "kmf-dairy-4",
+      categoryKey: "agriculture",
+      catEn: "Agriculture", catKn: "ಕೃಷಿ",
+      titleEn: (pncEn) => `KMF Nandini Milk Producers Cooperative Society - ${pncEn}`,
+      titleKn: (pncKn) => `ಕೆಎಂಎಫ್ ನಂದಿನಿ ಹಾಲಿನ ಉತ್ಪಾದಕರ ಸಹಕಾರ ಸಂಘ - ${pncKn}`,
+      descEn: (pncEn) => `Daily morning & evening dairy milk collection, government milk subsidy disbursement & cattle feed sales.`,
+      descKn: (pncKn) => `${pncKn} ಪ್ರತಿದಿನ ಬೆಳಿಗ್ಗೆ ಮತ್ತು ಸಂಜೆ ಹಾಲು ಸಂಗ್ರಹಣೆ, ಸರ್ಕಾರಿ ಪ್ರೋತ್ಸಾಹಧನ ಹಾಗೂ ಜಾನುವಾರು ಆಹಾರ ವಿತರಣೆ.`,
+      hours: "6:00 AM - 9:00 AM & 5:00 PM - 7:30 PM",
+      isEmergency: false
+    }
+  ];
+
+  KARNATAKA_DISTRICTS_LIST.forEach((dist) => {
+    const panchayats = KARNATAKA_PANCHAYATS_BY_DISTRICT[dist.en] || [];
+    panchayats.forEach((pnc, pncIdx) => {
+      const pncEn = pnc.en;
+      const pncKn = pnc.kn || pnc.en;
+
+      KARNATAKA_TEMPLATES.forEach((tmpl, tmplIdx) => {
+        idCounter++;
+        const contactObj = REPRESENTATIVE_NAMES[(pncIdx + tmplIdx) % REPRESENTATIVE_NAMES.length];
+        const phoneDigitA = (pncIdx * 7 + tmplIdx * 3) % 10;
+        const phoneDigitRest = Math.floor((pncIdx * 1973 + tmplIdx * 883) % 90000 + 10000);
+        const phoneNumber = `+91 9480${phoneDigitA} ${phoneDigitRest}`;
+        const logDay = 1 + ((pncIdx + tmplIdx) % 28);
+        const lastVerified = `2026-06-${logDay.toString().padStart(2, "0")}`;
+
+        const titleEnStr = tmpl.titleEn(pncEn);
+        const titleKnStr = tmpl.titleKn(pncKn);
+        const descEnStr = tmpl.descEn(pncEn);
+        const descKnStr = tmpl.descKn(pncKn);
+
+        result.push({
+          id: `kar-pnc-${pncEn.toLowerCase().replace(/\s+/g, '-')}-${tmpl.subId}`,
+          categoryKey: tmpl.categoryKey,
+          phoneNumber,
+          lastVerified,
+          isEmergency: tmpl.isEmergency,
+          districtName: dist.en,
+          panchayatName: pncEn,
+          localityName: pncEn,
+          translations: {
+            kn: {
+              title: titleKnStr,
+              description: descKnStr,
+              category: tmpl.catKn,
+              location: `${pncKn}, ${dist.kn} ಜಿಲ್ಲೆ, ಕರ್ನಾಟಕ`,
+              hours: tmpl.hours,
+              contactName: contactObj.en
+            },
+            en: {
+              title: titleEnStr,
+              description: descEnStr,
+              category: tmpl.catEn,
+              location: `${pncEn}, ${dist.en} District, Karnataka`,
+              hours: tmpl.hours,
+              contactName: contactObj.en
+            },
+            ml: {
+              title: titleEnStr,
+              description: descEnStr,
+              category: tmpl.catEn,
+              location: `${pncEn}, ${dist.en}, കർണാടക`,
+              hours: tmpl.hours,
+              contactName: contactObj.en
+            },
+            hi: {
+              title: titleEnStr,
+              description: descEnStr,
+              category: tmpl.catEn,
+              location: `${pncEn}, ${dist.en}, कर्नाटक`,
+              hours: tmpl.hours,
+              contactName: contactObj.en
+            },
+            te: {
+              title: titleEnStr,
+              description: descEnStr,
+              category: tmpl.catEn,
+              location: `${pncEn}, ${dist.en}, కర్ణాటక`,
+              hours: tmpl.hours,
+              contactName: contactObj.en
+            }
+          }
+        });
+      });
+    });
+  });
+
   return result;
 }
 
 const INITIAL_SERVICES = generateRemainingServices();
 
+/**
+ * Helper function to filter service-observatory data based on state ID.
+ * @param {Array} servicesList - Array of service objects.
+ * @param {string} stateId - Selected state ID ("kerala", "karnataka", "tamilnadu", "andhra", "all").
+ * @returns {Array} Filtered list of services for the given state ID.
+ */
+function filterServiceObservatoryDataByState(servicesList = [], stateId = "all") {
+  if (!servicesList || !Array.isArray(servicesList)) return [];
+  if (!stateId || stateId === "all") return servicesList;
+
+  const normalizedState = String(stateId).toLowerCase().trim();
+
+  return servicesList.filter((service) => {
+    if (!service) return false;
+
+    // Direct property match if available
+    if (service.stateId) {
+      return service.stateId.toLowerCase() === normalizedState;
+    }
+
+    const serviceId = (service.id || "").toLowerCase();
+    const district = (service.districtName || "").toLowerCase();
+
+    if (normalizedState === "karnataka") {
+      if (serviceId.startsWith("kar-")) return true;
+      if (KARNATAKA_DISTRICTS_LIST.some((d) => d.en.toLowerCase() === district)) return true;
+      return false;
+    }
+
+    if (normalizedState === "kerala") {
+      if (serviceId.startsWith("kar-") || serviceId.startsWith("tn-") || serviceId.startsWith("ap-")) return false;
+      if (KARNATAKA_DISTRICTS_LIST.some((d) => d.en.toLowerCase() === district)) return false;
+      if (TAMILNADU_DISTRICTS_LIST.some((d) => d.en.toLowerCase() === district)) return false;
+      if (ANDHRAPRADESH_DISTRICTS_LIST.some((d) => d.en.toLowerCase() === district)) return false;
+      return true;
+    }
+
+    if (normalizedState === "tamilnadu") {
+      if (serviceId.startsWith("tn-")) return true;
+      if (TAMILNADU_DISTRICTS_LIST.some((d) => d.en.toLowerCase() === district)) return true;
+      return false;
+    }
+
+    if (normalizedState === "andhra" || normalizedState === "andhrapradesh") {
+      if (serviceId.startsWith("ap-")) return true;
+      if (ANDHRAPRADESH_DISTRICTS_LIST.some((d) => d.en.toLowerCase() === district)) return true;
+      return false;
+    }
+
+    return true;
+  });
+}
+
 export {
   INITIAL_SERVICES,
+  filterServiceObservatoryDataByState,
   KERALA_DISTRICTS,
   AZHIYUR_SUB_LOCALITIES,
   LOCALITIES_EN,
@@ -1294,5 +1660,13 @@ export {
   LOCALITIES_ML,
   LOCALITIES_TE,
   SUPPORTED_LANGUAGES,
-  UI_TRANSLATIONS
+  UI_TRANSLATIONS,
+  KERALA_DISTRICTS_LIST,
+  KERALA_PANCHAYATS_BY_DISTRICT,
+  KARNATAKA_DISTRICTS_LIST,
+  KARNATAKA_PANCHAYATS_BY_DISTRICT,
+  TAMILNADU_DISTRICTS_LIST,
+  TAMILNADU_PANCHAYATS_BY_DISTRICT,
+  ANDHRAPRADESH_DISTRICTS_LIST,
+  ANDHRAPRADESH_PANCHAYATS_BY_DISTRICT
 };

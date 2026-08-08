@@ -1,0 +1,22 @@
+{
+  "entities": {
+    "users": {
+      "title": "Users",
+      "description": "Registered citizen and panchayat user profiles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string" },
+        "district": { "type": "string" },
+        "locality": { "type": "string" },
+        "aadhaarLast4": { "type": "string" },
+        "avatarColor": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "name", "email"]
+    }
+  }
+}
