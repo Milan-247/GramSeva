@@ -1,4 +1,4 @@
-# 🌾 GramSeva (ഗ്രാമസേവ) — Unified Kerala Grama Panchayat & Citizen Services Portal
+# 🌾 Grama Panchayat & Citizen Services Portal
 
 GramSeva is an offline-first, multilingual emergency, public utility, and digital governance portal designed specifically for local Grama Panchayats, villages, and towns across Kerala. Built with **React 19**, **Vite**, **Tailwind CSS**, **Motion**, **Leaflet**, and **Firebase**, GramSeva bridges the gap between rural citizens and public services with tax payments, grievance tracking, certificate guides, emergency dialers, and localized maps.
 
