@@ -1,0 +1,6 @@
+{
+  "name": "Village Services Directory",
+  "description": "An offline-first, multilingual emergency and essential services directory with digital document wallet, AO* certificate resolver, and localized civic tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
