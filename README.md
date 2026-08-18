@@ -1,49 +1,41 @@
-# 🌾 GramSeva (ഗ്രാമസേവ) — Unified Kerala Grama Panchayat & Citizen Services Portal
+# 🌾 GramSeva — Unified Grama Panchayat & Citizen Services Portal
 
-GramSeva is an offline-first, multilingual emergency, public utility, and digital governance portal designed specifically for local Grama Panchayats, villages, and towns across Kerala. Built with **React 19**, **Vite**, **Tailwind CSS**, **Motion**, **Leaflet**, and **Firebase**, GramSeva bridges the gap between rural citizens and public services with tax payments, grievance tracking, certificate guides, emergency dialers, and localized maps.
+GramSeva is an offline-first, multilingual emergency, public utility, and digital governance portal designed for local Grama Panchayats, villages, blocks, and towns across India. Built with **React 19**, **Vite**, **Tailwind CSS**, **Motion**, **Leaflet**, and **Firebase**, GramSeva bridges the gap between rural citizens and public services with digital document vaults, joint dependency certificate guidance, grievance tracking, emergency dialers, and localized interactive maps.
 
 ---
 
 ## 🌟 Key Features
 
-- 🌐 **Multilingual Accessibility**: Native support for **Malayalam (മലയാളം)**, **English**, **Hindi (हिंदी)**, **Telugu (తెలుగు)**, and **Kannada (ಕನ್ನಡ)** with a dynamic language selector dial wheel.
-- 💳 **Unified Grama Panchayat Tax Gateway**:
-  - Calculate and pay **Property Tax**, **Building Tax (Plinth Area)**, **Water Charges**, and **Professional Tax**.
-  - Instant **5% Early Online Rebate** discounts.
-  - Multiple payment options (UPI with instant QR Code, Net Banking, Debit/Credit Card).
-  - Printable & downloadable official state receipts with verifiable QR authentication.
+- 🌐 **Multilingual & Pan-State Accessibility**: Native support for **English**, **Malayalam (മലയാളം)**, **Kannada (ಕನ್ನಡ)**, **Telugu (తెలుగు)**, **Tamil (தமிழ்)**, and **Hindi (हिंदी)** with interactive state and district selectors.
+- 🗂️ **Digital Document Wallet & Vault**:
+  - Secure offline-first digital document storage with client-side OCR text extraction and biometric/PIN lock.
+  - Pre-configured citizen vault presets (Aadhaar, Voter ID, Ration Card, Land Records, Caste/Income certificates).
+  - Quick QR verification and instant document export.
+- 📜 **AO* Certificate Dependency Resolver**:
+  - Algorithmic graph search for certificate prerequisites and issuance chains (Income, Caste, Domicile, Non-Creamy Layer, Land Valuation, Building Permits).
+  - Complete breakdown of issuing authorities (**Village Office**, **Grama Panchayat**, **Revenue Department**, **Common Service Centres**).
+  - Turnaround time estimates, processing fee details, and step-by-step required document checklists.
 - 📢 **Grievance & Redressal Tracking System**:
-  - Lodge local complaints for water supply, road repairs/potholes, street lighting, waste disposal, health, and agriculture.
+  - Lodge local complaints for water supply, road repairs, street lighting, waste disposal, health, and agriculture.
   - Auto-generated tracking ticket IDs (`GS-2026-XXXX`).
-  - Real-time status tracker (*Submitted*, *Under Review*, *Assigned*, *In Progress*, *Resolved*).
-  - Assigned Duty Officer badges and direct complaint status lookup by Ticket ID or phone number.
-- 📜 **Joint Dependency Certificate Resolver**:
-  - Step-by-step guidance for obtaining essential certificates (Birth, Death, Income, Caste, Domicile, Land Valuation, Building Permits).
-  - Complete breakdown of issuing authorities (**Village Office**, **Grama Panchayat**, **Akshaya Common Service Centre**).
-  - Comprehensive document intake checklists, turnaround time estimates, and processing fee details.
-- 📋 **Required Documents Checklists**:
-  - Interactive accordion checklist for every public service (Aadhaar, Ration Card, Land Tax Receipts, Passport photos, etc.).
-  - Real-time completion progress indicators and instant copy-to-clipboard function.
+  - Real-time status tracking (*Submitted*, *Under Review*, *Assigned*, *In Progress*, *Resolved*) with priority badges.
 - 🗺️ **Interactive Service Map & Geolocation**:
-  - Integrated Leaflet map with custom category markers, live route navigation, and a "Near Me" radius filter.
+  - Integrated Leaflet map with custom category markers, 24/7 emergency facility filters, and multi-state coordinates.
 - 📞 **Direct Helpline & Emergency Contacts**:
-  - One-touch dialers for Police (112), Fire & Rescue (101), Health/Ambulance (108), KSEB Power, KWA Water, Kudumbashree units, and local autorickshaw/taxi stands.
-- 🔐 **Firebase Auth & Firestore Cloud Sync**:
-  - Secure login/signup with Firebase Auth and profile synchronization.
-  - Offline-first cache architecture ensuring uninterrupted performance in low-connectivity rural areas.
-- 📊 **Panchayat Analytics Dashboard**:
-  - Recharts visual distribution charts for service density across healthcare, water, utilities, and emergency hubs.
+  - One-touch dialers for Police (112), Fire & Rescue (101), Health/Ambulance (108), Electricity Boards, Water Authorities, and local civic desks.
+- 🔐 **Firebase Auth & Cloud Sync**:
+  - Citizen profile synchronization with Firebase Authentication and Firestore security rules.
+  - Offline-first cache architecture ensuring uninterrupted performance in low-connectivity areas.
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Frontend Framework**: [React 19](https://react.dev/) + [Vite](https://vitejs.dev/)
-- **Styling & Design System**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Styling & Design System**: [Tailwind CSS](https://tailwindcss.com/)
 - **Animations**: [Motion](https://motion.dev/)
 - **Database & Authentication**: [Firebase / Firestore](https://firebase.google.com/)
 - **Maps & Geolocation**: [Leaflet](https://leafletjs.com/) + [React Leaflet](https://react-leaflet.js.org/)
-- **Data Visualization**: [Recharts](https://recharts.org/)
 - **Iconography**: [Lucide React](https://lucide.dev/)
 - **AI Capabilities**: [@google/genai](https://www.npmjs.com/package/@google/genai) (Google Gemini API)
 
@@ -55,23 +47,26 @@ GramSeva is an offline-first, multilingual emergency, public utility, and digita
 gramseva/
 ├── src/
 │   ├── components/
-│   │   ├── CategoryChart.jsx               # Visual service category distribution charts
-│   │   ├── CertificateResolver.jsx         # Joint dependency certificate guidance engine
+│   │   ├── CertificateResolver.jsx         # AO* graph search certificate guidance engine
+│   │   ├── DigitalDocumentWallet.jsx       # Citizen document vault & OCR extraction
 │   │   ├── FirebaseAuthModal.jsx           # Firebase authentication & citizen sign-in modal
-│   │   ├── GraamsevaSeal.jsx               # Official Grama Panchayat emblem seal
+│   │   ├── GraamSevaSeal.jsx               # Official civic emblem seal
 │   │   ├── GrievanceTracker.jsx            # Local complaint lodging & ticket tracker
-│   │   ├── LanguageWheel.jsx               # Animated dial wheel for 5-language toggle
+│   │   ├── LanguageWheel.jsx               # Animated dial wheel for multi-language toggle
 │   │   ├── RequiredDocumentsAccordion.jsx  # Interactive document requirement checklist
-│   │   ├── ServiceMap.jsx                  # Leaflet interactive map with custom pins
+│   │   ├── ServiceMap.jsx                  # Leaflet interactive map with category markers
 │   │   ├── Skeletons.jsx                   # Loading state placeholders
-│   │   ├── TaxPaymentPortal.jsx            # Grama Panchayat tax calculator & gateway
+│   │   ├── UserProfileHub.jsx              # Citizen profile & verification hub
 │   │   └── WiseGatekeeperLogin.jsx         # Citizen onboarding & ward verification
 │   ├── data/
-│   │   └── services.js                     # Localized dataset & Kerala district/panchayat maps
+│   │   ├── services.js                     # Localized public services directory
+│   │   ├── certificateGraphData.js         # Certificate dependency rules & graph nodes
+│   │   ├── searchDictionary.js             # Phonetic and multilingual search index
+│   │   └── regionalGreetings.js            # Localized greeting messages
 │   ├── lib/
 │   │   └── firebase.js                     # Firebase app initialization & Firestore client
-│   ├── context/                            # React state context providers
-│   ├── utils/                              # Helper functions & formatting utilities
+│   ├── context/                            # Language & application state providers
+│   ├── utils/                              # Helper functions, OCR, and AO* solver
 │   ├── App.jsx                             # Main layout, tab navigation, & filtering logic
 │   ├── types.ts                            # TypeScript data definitions
 │   └── main.jsx                            # Vite application entry point
@@ -131,18 +126,6 @@ npm -v
 | `npm run build` | Builds the production bundle in `dist/` |
 | `npm run preview` | Previews the production build locally |
 | `npm run lint` | Runs Vite production build verification |
-
----
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome! Feel free to open an issue or submit a pull request.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ---
 
