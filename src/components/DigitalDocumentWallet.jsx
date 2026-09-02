@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   FolderCheck,
   ShieldCheck,
@@ -42,7 +43,9 @@ import {
   User,
   CheckCircle2,
   X,
-  Maximize2
+  Maximize2,
+  CheckSquare,
+  Lock
 } from "lucide-react";
 import {
   DOCUMENT_CATEGORIES,
@@ -54,34 +57,35 @@ import { scanDocumentPhoto, inspectDocumentMismatches, SAMPLE_DOCUMENT_PRESETS }
 // Multilingual labels for Document Wallet
 const WALLET_TRANSLATIONS = {
   en: {
-    title: "Digital Document Wallet & Certificate Vault",
-    subtitle: "Secure digital locker for ration cards, income certificates, land deeds, and identity proofs for village applications.",
+    title: "Digital Document Wallet & Vault",
+    badge: "Encrypted & Offline Cached",
+    subtitle: "Secure digital locker for ration cards, income certificates, land deeds, and identity proofs for village counter applications.",
     totalDocs: "Total Documents",
     verified: "e-District Verified",
     permanent: "Permanent Records",
-    expiringAlert: "Expiring / Annual Renewal",
-    searchPlaceholder: "Search documents by name, number, authority, notes...",
+    expiringAlert: "Annual Renewal Needed",
+    searchPlaceholder: "Search by title, number, holder, authority, or notes...",
     addDocBtn: "Add Document",
     scanOcrBtn: "Scan & OCR Photo",
-    mismatchBtn: "Inspect Mismatches",
-    loadSampleBtn: "Load Sample Family Packet",
+    mismatchBtn: "Spelling Check",
+    loadSampleBtn: "Sample Packet",
     exportBtn: "Export Backup",
     importBtn: "Import",
-    printSlipBtn: "Print Master Checklist",
+    printSlipBtn: "Print Checklist",
     emptyTitle: "Your Document Wallet is Empty",
     emptySub: "Store your Aadhaar, Ration Card, Income Certificate, and Land Tax receipts to access them anytime at the Panchayat office.",
-    viewCard: "View Digital Card / Slip",
-    editDoc: "Edit Document",
+    viewCard: "Digital Slip",
+    editDoc: "Edit",
     deleteDoc: "Remove",
     showNo: "Show Number",
     hideNo: "Hide Number",
     copied: "Copied to clipboard!",
-    verifiedBadge: "Verified for Village Office",
-    permanentBadge: "Permanent",
+    verifiedBadge: "Verified",
+    permanentBadge: "Life-long",
     validUntil: "Valid until",
     expired: "Expired / Renewal Needed",
     openPlanner: "Plan Office Route with These Docs",
-    modalAddTitle: "Add Document to Digital Wallet",
+    modalAddTitle: "Add Document to Wallet",
     modalEditTitle: "Edit Wallet Document",
     docTypeSelect: "Select Standard Document Type",
     customDocOption: "Custom / Other Document",
@@ -96,23 +100,24 @@ const WALLET_TRANSLATIONS = {
     issuingAuthority: "Issuing Authority / Office",
     issueDate: "Date of Issue",
     expiryDate: "Expiry Date (or leave empty if permanent)",
-    isPermanentCheck: "Permanent / Life-long Document (No expiry)",
-    notes: "Private Notes / Storage Location Remarks",
+    isPermanentCheck: "Life-long Document (No Expiry Date)",
+    notes: "Private Notes & Storage Location",
     notesPlaceholder: "e.g. Original stored in green file at home, needed for PM-Kisan renewal.",
     attachPhoto: "Attach Scanned Photo / PDF (Optional)",
     saveBtn: "Save Document",
     cancelBtn: "Cancel",
     confirmDelete: "Are you sure you want to remove this document from your digital wallet?",
-    mismatchTitle: "Cross-Document Integrity & Spelling Inspector",
+    mismatchTitle: "Cross-Document Spelling & Inconsistency Inspector",
     mismatchSub: "Detects name spelling and Date of Birth differences across your saved documents to prevent rejection at village counters.",
-    noMismatches: "All scanned documents show consistent Name and DOB formatting!",
+    noMismatches: "All documents show consistent Name and DOB formatting!",
     sampleLoaded: "Sample citizen document packet loaded into your wallet!",
-    cardPreviewTitle: "Official Digital Citizen Slip & Certificate",
-    printAction: "Print / Save as PDF",
+    cardPreviewTitle: "Digital Citizen Verification Slip",
+    printAction: "Print / Save PDF",
     closeModal: "Close"
   },
   ml: {
     title: "ഡിജിറ്റൽ രേഖാ വാലറ്റ് & സർട്ടിഫിക്കറ്റ് വോൾട്ട്",
+    badge: "സുരക്ഷിത ഓഫ്ലൈൻ ലോക്കർ",
     subtitle: "റേഷൻ കാർഡ്, വരുമാന സർട്ടിഫിക്കറ്റ്, ഭൂനികുതി രസീത്, ആധാർ തുടങ്ങിയ രേഖകൾ സുരക്ഷിതമായി സൂക്ഷിക്കാനുള്ള ഡിജിറ്റൽ ലോക്കർ.",
     totalDocs: "ആകെ രേഖകൾ",
     verified: "സ്ഥിരീകരിച്ച രേഖകൾ",
@@ -120,142 +125,144 @@ const WALLET_TRANSLATIONS = {
     expiringAlert: "പുതുക്കേണ്ടവ",
     searchPlaceholder: "രേഖയുടെ പേര്, നമ്പർ, വില്ലേജ് ഓഫീസ് എന്നിവ തിരയുക...",
     addDocBtn: "രേഖ ചേർക്കുക",
-    scanOcrBtn: "ഫോട്ടോ സ്കാൻ ചെയ്യുക (OCR)",
-    mismatchBtn: "പേരിലെ തെറ്റുകൾ പരിശോധിക്കുക",
-    loadSampleBtn: "മാതൃകാ രേഖകൾ ലോഡ് ചെയ്യുക",
-    exportBtn: "ബാക്കപ്പ് എടുക്കുക",
+    scanOcrBtn: "സ്കാൻ & OCR",
+    mismatchBtn: "പേരിലെ തെറ്റുകൾ",
+    loadSampleBtn: "മാതൃകാ രേഖകൾ",
+    exportBtn: "ബാക്കപ്പ്",
     importBtn: "ഇംപോർട്ട്",
-    printSlipBtn: "രേഖാ ചെക്ക്‌ലിസ്റ്റ് പ്രിന്റ് ചെയ്യുക",
+    printSlipBtn: "പ്രിന്റ് ചെക്ക്‌ലിസ്റ്റ്",
     emptyTitle: "നിങ്ങളുടെ രേഖാ വാലറ്റ് ശൂന്യമാണ്",
     emptySub: "പഞ്ചായത്ത്, വില്ലേജ് ഓഫീസ് ആവശ്യങ്ങൾക്ക് ആധാർ, റേഷൻ കാർഡ്, കരം രസീത് എന്നിവ ഇവിടെ സൂക്ഷിക്കാം.",
-    viewCard: "ഡിജിറ്റൽ കാർഡ് കാണുക",
+    viewCard: "ഡിജിറ്റൽ കാർഡ്",
     editDoc: "മാറ്റം വരുത്തുക",
     deleteDoc: "ഒഴിവാക്കുക",
     showNo: "നമ്പർ കാണിക്കുക",
     hideNo: "നമ്പർ മറയ്ക്കുക",
     copied: "കോപ്പി ചെയ്തു!",
-    verifiedBadge: "പഞ്ചായത്ത് അംഗീകൃതം",
+    verifiedBadge: "സ്ഥിരീകരിച്ചു",
     permanentBadge: "സ്ഥിരം രേഖ",
     validUntil: "കാലാവധി:",
     expired: "കാലാവധി കഴിഞ്ഞു",
     openPlanner: "ഈ രേഖകൾ ഉപയോഗിച്ച് അപേക്ഷാ പ്ലാൻ കാണുക",
-    modalAddTitle: "പുതിയ രേഖ വാലറ്റിലേക്ക് ചേർക്കുക",
+    modalAddTitle: "പുതിയ രേഖ ചേർക്കുക",
     modalEditTitle: "രേഖയിൽ മാറ്റം വരുത്തുക",
     docTypeSelect: "രേഖയുടെ ഇനം തിരഞ്ഞെടുക്കുക",
     customDocOption: "മറ്റു രേഖകൾ",
     docTitle: "രേഖയുടെ പേര്",
     docNumber: "രേഖാ നമ്പർ",
-    holderName: "രേഖയിലെ ഉടമസ്ഥന്റെ പേര്",
+    holderName: "ഉടമസ്ഥന്റെ പേര്",
     guardianName: "രക്ഷിതാവിന്റെ / പിതാവിന്റെ പേര്",
     dob: "ജനനത്തീയതി (DD/MM/YYYY)",
     gender: "ലിംഗം",
     address: "മേൽവിലാസം",
     category: "വിഭാഗം",
     issuingAuthority: "നൽകിയ ഓഫീസ് / അതോറിറ്റി",
-    issueDate: "ലഭിച്ച തീയതി",
+    issueDate: "നൽകിയ തീയതി",
     expiryDate: "കാലാവധി തീയതി",
-    isPermanentCheck: "സ്ഥിരം രേഖ (കാലാവധി ഇല്ല)",
+    isPermanentCheck: "സ്ഥിര രേഖ (കാലാവധി ഇല്ല)",
     notes: "പ്രത്യേക കുറിപ്പുകൾ",
-    notesPlaceholder: "ഉദാ: ഒറിജിനൽ പച്ച ഫയലിൽ സൂക്ഷിച്ചിരിക്കുന്നു.",
-    attachPhoto: "രേഖയുടെ ഫോട്ടോ / കോപ്പി ചേർക്കുക",
+    notesPlaceholder: "ഉദാ: ഒറിജിനൽ വീട്ടിലെ പച്ച ഫയലിൽ സൂക്ഷിച്ചിരിക്കുന്നു.",
+    attachPhoto: "ഫോട്ടോ / സ്കാൻ കോപ്പി",
     saveBtn: "സൂക്ഷിക്കുക",
     cancelBtn: "റദ്ദാക്കുക",
-    confirmDelete: "ഈ രേഖ വാലറ്റിൽ നിന്നും ഒഴിവാക്കണോ?",
-    mismatchTitle: "രേഖകളിലെ പേരിലെ വ്യത്യാസങ്ങൾ പരിശോധിക്കുക",
-    mismatchSub: "ഓഫീസുകളിൽ അപേക്ഷ നിരസിക്കപ്പെടാതിരിക്കാൻ ആധാർ, റേഷൻ കാർഡുകളിലെ സ്പെല്ലിംഗ് വ്യത്യാസങ്ങൾ കണ്ടെത്തുന്നു.",
-    noMismatches: "എല്ലാ രേഖകളിലും പേരും ജനനത്തീയതിയും കൃത്യമായി ഒത്തുപോകുന്നു!",
-    sampleLoaded: "മാതൃകാ രേഖകൾ വിജയകരമായി ലോഡ് ചെയ്തു!",
-    cardPreviewTitle: "ഔദ്യോഗിക ഡിജിറ്റൽ രേഖാ കാർഡ് & പ്രിന്റ് സ്ലിപ്പ്",
-    printAction: "പ്രിന്റ് ചെയ്യുക / PDF",
+    confirmDelete: "ഈ രേഖ വാലറ്റിൽ നിന്ന് നീക്കം ചെയ്യണോ?",
+    mismatchTitle: "പേരിലെ തെറ്റുകൾ പരിശോധിക്കുക",
+    mismatchSub: "അപേക്ഷകൾ നിരസിക്കപ്പെടാതിരിക്കാൻ ആധാർ, റേഷൻ കാർഡ് എന്നിവയിലെ പേരുകൾ താരതമ്യം ചെയ്യുക.",
+    noMismatches: "എല്ലാ രേഖകളിലും പേരുകളും ജനനത്തീയതിയും ശരിയാണ്!",
+    sampleLoaded: "മാതൃകാ രേഖകൾ ലോഡ് ചെയ്തു!",
+    cardPreviewTitle: "ഡിജിറ്റൽ വെരിഫിക്കേഷൻ സ്ലിപ്പ്",
+    printAction: "പ്രിന്റ് / PDF",
     closeModal: "അടയ്ക്കുക"
   },
   hi: {
-    title: "डिजिटल दस्तावेज़ वॉलेट और प्रमाणपत्र वॉल्ट",
-    subtitle: "राशन कार्ड, आय प्रमाण पत्र, भूमि लगान रसीद और आधार कार्ड को सुरक्षित रखने का डिजिटल लॉकर।",
-    totalDocs: "कुल दस्तावेज़",
-    verified: "सत्यापित रिकॉर्ड्स",
-    permanent: "स्थायी दस्तावेज़",
+    title: "डिजिटल दस्तावेज वॉलेट",
+    badge: "सुरक्षित व ऑफलाइन लॉकर",
+    subtitle: "राशन कार्ड, आय प्रमाण पत्र, भू-लगान रसीद और पहचान पत्रों को पंचायत कार्यों के लिए सुरक्षित रखें।",
+    totalDocs: "कुल दस्तावेज",
+    verified: "सत्यापित रिकॉर्ड",
+    permanent: "स्थायी रिकॉर्ड",
     expiringAlert: "नवीनीकरण योग्य",
-    searchPlaceholder: "दस्तावेज़ नाम, संख्या, कार्यालय या टिप्पणी खोजें...",
-    addDocBtn: "दस्तावेज़ जोड़ें",
-    scanOcrBtn: "फ़ोटो स्कैन करें (OCR)",
-    mismatchBtn: "नाम व वर्तनी जांचें",
-    loadSampleBtn: "नमूना दस्तावेज़ लोड करें",
-    exportBtn: "बैकअप निर्यात",
-    importBtn: "आयात करें",
-    printSlipBtn: "चेकलिस्ट प्रिंट करें",
+    searchPlaceholder: "नाम, संख्या, कार्यालय या नोट खोजें...",
+    addDocBtn: "दस्तावेज जोड़ें",
+    scanOcrBtn: "स्कैन व OCR",
+    mismatchBtn: "स्पेलिंग जांच",
+    loadSampleBtn: "सैंपल डेटा",
+    exportBtn: "बैकअप",
+    importBtn: "इंपोर्ट",
+    printSlipBtn: "चेकलिस्ट प्रिंट",
     emptyTitle: "आपका वॉलेट खाली है",
-    emptySub: "पंचायत व ब्लॉक कार्यालय के कार्यों के लिए अपने दस्तावेज़ यहाँ सुरक्षित रखें।",
-    viewCard: "डिजिटल कार्ड देखें",
-    editDoc: "संपादित करें",
+    emptySub: "पंचायत व सेवा केंद्र के लिए आधार, राशन कार्ड और आय प्रमाण पत्र यहां सुरक्षित रखें।",
+    viewCard: "डिजिटल कार्ड",
+    editDoc: "बदलें",
     deleteDoc: "हटाएं",
     showNo: "नंबर दिखाएं",
-    hideNo: "नंबर छिपाएं",
-    copied: "कॉपी किया गया!",
-    verifiedBadge: "ग्राम कार्यालय सत्यापित",
+    hideNo: "नंबर छुपाएं",
+    copied: "कॉपी हो गया!",
+    verifiedBadge: "सत्यापित",
     permanentBadge: "स्थायी",
-    validUntil: "वैधता तक:",
-    expired: "समय समाप्त / नवीनीकरण आवश्यक",
-    openPlanner: "प्रमाणपत्र आवेदन योजना देखें",
-    modalAddTitle: "वॉलेट में दस्तावेज़ जोड़ें",
-    modalEditTitle: "दस्तावेज़ संपादित करें",
-    docTypeSelect: "दस्तावेज़ का प्रकार चुनें",
-    customDocOption: "अन्य दस्तावेज़",
-    docTitle: "दस्तावेज़ का नाम",
-    docNumber: "दस्तावेज़ / आईडी संख्या",
+    validUntil: "मान्य तारीख:",
+    expired: "समय समाप्त",
+    openPlanner: "इन दस्तावेजों से कार्यालय प्लान देखें",
+    modalAddTitle: "दस्तावेज जोड़ें",
+    modalEditTitle: "दस्तावेज बदलें",
+    docTypeSelect: "दस्तावेज का प्रकार चुनें",
+    customDocOption: "अन्य दस्तावेज",
+    docTitle: "दस्तावेज का नाम",
+    docNumber: "आईडी संख्या",
     holderName: "धारक का नाम",
-    guardianName: "अभिभावक / पिता / पति का नाम",
-    dob: "जन्म तिथि",
+    guardianName: "पिता / अभिभावक का नाम",
+    dob: "जन्म तिथि (DD/MM/YYYY)",
     gender: "लिंग",
     address: "पता",
     category: "श्रेणी",
-    issuingAuthority: "जारीकर्ता प्राधिकरण",
-    issueDate: "जारी करने की तिथि",
-    expiryDate: "वैधता समाप्ति तिथि",
-    isPermanentCheck: "स्थायी दस्तावेज़ (कोई समाप्ति नहीं)",
-    notes: "टिप्पणी / रखने का स्थान",
-    notesPlaceholder: "उदा: मूल प्रति घर की अलमारी में रखी है।",
-    attachPhoto: "फ़ोटो / स्कैन संलग्न करें",
+    issuingAuthority: "जारीकर्ता कार्यालय",
+    issueDate: "जारी तिथि",
+    expiryDate: "समाप्ति तिथि",
+    isPermanentCheck: "स्थायी दस्तावेज (कोई समाप्ति नहीं)",
+    notes: "नोट्स व रखने का स्थान",
+    notesPlaceholder: "उदा: मूल प्रति घर पर फाइल में रखी है।",
+    attachPhoto: "फोटो / स्कैन जोड़ें",
     saveBtn: "सहेजें",
     cancelBtn: "रद्द करें",
-    confirmDelete: "क्या आप इस दस्तावेज़ को हटाना चाहते हैं?",
-    mismatchTitle: "दस्तावेज़ वर्तनी एवं विसंगति जांच",
-    mismatchSub: "विभिन्न दस्तावेजों में नाम और जन्म तिथि की विसंगतियों को जांचें।",
-    noMismatches: "सभी दस्तावेजों में नाम और जन्मतिथि एक समान है!",
-    sampleLoaded: "नमूना नागरिक दस्तावेज़ पैकेट लोड हो गया!",
-    cardPreviewTitle: "आधिकारिक डिजिटल नागरिक पर्ची",
-    printAction: "प्रिंट / पीडीएफ",
+    confirmDelete: "क्या आप इस दस्तावेज को हटाना चाहते हैं?",
+    mismatchTitle: "स्पेलिंग व नाम मिलान जांच",
+    mismatchSub: "अस्वीकृति से बचने के लिए आधार और राशन कार्ड में नाम की जांच करें।",
+    noMismatches: "सभी दस्तावेजों में नाम व जन्म तिथि सही है!",
+    sampleLoaded: "सैंपल दस्तावेज लोड हो गए!",
+    cardPreviewTitle: "डिजिटल नागरिक सत्यापन पर्ची",
+    printAction: "प्रिंट / PDF",
     closeModal: "बंद करें"
   },
   te: {
-    title: "డిజిటల్ పత్రాల వాలెట్ & సర్టిఫికేట్ లాకర్",
-    subtitle: "గ్రామ సచివాలయ సేవలు, రేషన్ కార్డు, ఆదాయ ధృవీకరణ పత్రాలు భద్రపరుచుకోవడానికి డిజిటల్ లాకర్.",
+    title: "డిజిటల్ పత్రాల వాలెట్",
+    badge: "సురక్షిత ఆఫ్లైన్ లాకర్",
+    subtitle: "రేషన్ కార్డు, ఆదాయ ధృవీకరణ పత్రం, ఆధార్ మొదలైన పత్రాలను సురక్షితంగా భద్రపరచండి.",
     totalDocs: "మొత్తం పత్రాలు",
     verified: "ధృవీకరించబడినవి",
     permanent: "శాశ్వత పత్రాలు",
     expiringAlert: "పునరుద్ధరణ అవసరం",
-    searchPlaceholder: "పత్రం పేరు, నంబర్, ఆఫీసు వెతకండి...",
-    addDocBtn: "పత్రం జోడించండి",
-    scanOcrBtn: "ఫోటో స్కాన్ (OCR)",
-    mismatchBtn: "పేరు తప్పులు సరిచూడండి",
-    loadSampleBtn: "నమూనా పత్రాలు లోడ్ చేయండి",
-    exportBtn: "బ్యాకప్ ఎగుమతి",
+    searchPlaceholder: "పేరు, సంఖ్య, అధికారి ద్వారా వెతకండి...",
+    addDocBtn: "పత్రం చేర్చండి",
+    scanOcrBtn: "స్కాన్ & OCR",
+    mismatchBtn: "స్పెల్లింగ్ తనిఖీ",
+    loadSampleBtn: "నమూనా పత్రాలు",
+    exportBtn: "బ్యాకప్",
     importBtn: "దిగుమతి",
-    printSlipBtn: "పత్రాల జాబితా ప్రింట్",
+    printSlipBtn: "జాబితా ప్రింట్",
     emptyTitle: "మీ వాలెట్ ఖాళీగా ఉంది",
-    emptySub: "గ్రామ సచివాలయ సేవల కోసం ఆధార్, రేషన్ కార్డు, ఆదాయ పత్రాలను ఇక్కడ దాచుకోండి.",
-    viewCard: "డిజిటల్ కార్డు చూడండి",
-    editDoc: "సవరించండి",
-    deleteDoc: "తొలగించండి",
-    showNo: "నంబర్ చూపించు",
-    hideNo: "నంబర్ దాచు",
+    emptySub: "పంచాయతీ మరియు సర్కారీ పనులకు ఆధార్, రేషన్ కార్డును ఇక్కడ భద్రపరచండి.",
+    viewCard: "డిజిటల్ కార్డు",
+    editDoc: "సవరించు",
+    deleteDoc: "తొలగించు",
+    showNo: "సంఖ్య చూపించు",
+    hideNo: "సంఖ్య దాచు",
     copied: "కాపీ చేయబడింది!",
-    verifiedBadge: "గ్రామ కార్యాలయ ధృవీకృతం",
+    verifiedBadge: "ధృవీకరించబడింది",
     permanentBadge: "శాశ్వతం",
     validUntil: "చెల్లుబాటు:",
     expired: "గడువు ముగిసింది",
-    openPlanner: "ఈ పత్రాలతో అప్లికేషన్ ప్లాన్ చూడండి",
-    modalAddTitle: "వాలెట్ లో పత్రం చేర్చండి",
+    openPlanner: "ఆఫీస్ ప్లాన్ చూడండి",
+    modalAddTitle: "పత్రం జోడించండి",
     modalEditTitle: "పత్రం సవరించండి",
     docTypeSelect: "పత్రం రకం ఎంచుకోండి",
     customDocOption: "ఇతర పత్రాలు",
@@ -267,53 +274,54 @@ const WALLET_TRANSLATIONS = {
     gender: "లింగం",
     address: "చిరునామా",
     category: "వర్గం",
-    issuingAuthority: "జారీ చేసిన కార్యాలయం",
-    issueDate: "జారీ చేసిన తేదీ",
-    expiryDate: "గడువు తేదీ",
+    issuingAuthority: "ఇచ్చిన అధికారి / కార్యాలయం",
+    issueDate: "ఇచ్చిన తేదీ",
+    expiryDate: "ముగింపు తేదీ",
     isPermanentCheck: "శాశ్వత పత్రం",
     notes: "గమనికలు",
-    notesPlaceholder: "ఉదా: ఒరిజినల్ పత్రం ఇంట్లో ఫైల్ లో ఉంది.",
+    notesPlaceholder: "ఉదా: అసలు కాపీ ఇంట్లో ఉంది.",
     attachPhoto: "ఫోటో జోడించండి",
-    saveBtn: "భద్రపరచండి",
+    saveBtn: "భద్రపరచు",
     cancelBtn: "రద్దు",
-    confirmDelete: "ఈ పత్రాన్ని తొలగించాలనుకుంటున్నారా?",
-    mismatchTitle: "పత్రాల స్పెల్లింగ్ మరియు తేడాల పరిశీలన",
-    mismatchSub: "అప్లికేషన్ రిజెక్ట్ కాకుండా ఆధార్, రేషన్ కార్డులలోని పేర్లను సరిపోల్చండి.",
-    noMismatches: "అన్ని పత్రాలలో వివరాలు సరిగ్గా సరిపోలుతున్నాయి!",
-    sampleLoaded: "నమూనా పత్రాలు లోడ్ అయ్యాయి!",
-    cardPreviewTitle: "అధికారిక డిజిటల్ సిటిజన్ స్లిప్",
+    confirmDelete: "ఈ పత్రాన్ని తొలగించాలా?",
+    mismatchTitle: "స్పెల్లింగ్ వ్యత్యాసాల తనిఖీ",
+    mismatchSub: "దరఖాస్తులు తిరస్కరించబడకుండా ఆధార్, రేషన్ కార్డు పేర్లను సరిచూడండి.",
+    noMismatches: "అన్ని పత్రాలలో వివరాలు సరిగ్గా ఉన్నాయి!",
+    sampleLoaded: "నమూనా పత్రాలు లోడ్ చేయబడ్డాయి!",
+    cardPreviewTitle: "డిజిటల్ ధృవీకరణ రసీదు",
     printAction: "ప్రింట్ / PDF",
     closeModal: "మూసివేయి"
   },
   kn: {
-    title: "ಡಿಜಿಟಲ್ ದಾಖಲೆಗಳ ವಾಲೆಟ್ & ಪ್ರಮಾಣಪತ್ರ ವಾಲ್ಟ್",
-    subtitle: "ಗ್ರಾಮ ಪಂಚಾಯಿತಿ ಸೇವೆಗಳಿಗಾಗಿ ರೇಷನ್ ಕಾರ್ಡ್, ಆದಾಯ ಪ್ರಮಾಣಪತ್ರ, ಜಮೀನು ತೆರಿಗೆ ರಸೀದಿಗಳನ್ನು ಸುರಕ್ಷಿತವಾಗಿಡಲು ಡಿಜಿಟಲ್ ಲಾಕರ್.",
+    title: "ಡಿಜಿಟಲ್ ದಾಖಲೆ ವಾಲೆಟ್",
+    badge: "ಸುರಕ್ಷಿತ ಆಫ್‌ಲೈನ್ ಲಾಕರ್",
+    subtitle: "ಗ್ರಾಮ ಪಂಚಾಯತಿ ಕೆಲಸಗಳಿಗಾಗಿ ಆಧಾರ್, ರೇಷನ್ ಕಾರ್ಡ್, ಆದಾಯ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಇಲ್ಲಿ ಸಂಗ್ರಹಿಸಿ.",
     totalDocs: "ಒಟ್ಟು ದಾಖಲೆಗಳು",
-    verified: "ದೃಢೀಕೃತ ದಾಖಲೆಗಳು",
+    verified: "ದೃಢೀಕರಿಸಿದ ದಾಖಲೆಗಳು",
     permanent: "ಶಾಶ್ವತ ದಾಖಲೆಗಳು",
     expiringAlert: "ನವೀಕರಣ ಬೇಕಾದವು",
-    searchPlaceholder: "ದಾಖಲೆಯ ಹೆಸರು, ಸಂಖ್ಯೆ, ಕಚೇರಿ ಹುಡುಕಿ...",
+    searchPlaceholder: "ಹೆಸರು, ಸಂಖ್ಯೆ, ಕಚೇರಿ ಮೂಲಕ ಹುಡುಕಿ...",
     addDocBtn: "ದಾಖಲೆ ಸೇರಿಸಿ",
-    scanOcrBtn: "ಫೋಟೋ ಸ್ಕ್ಯಾನ್ (OCR)",
-    mismatchBtn: "ಹೆಸರಿನ ಕಾಗುಣಿತ ತಪಾಸಣೆ",
-    loadSampleBtn: "ಮಾದರಿ ದಾಖಲೆಗಳನ್ನು ಲೋಡ್ ಮಾಡಿ",
-    exportBtn: "ಬ್ಯಾಕಪ್ ರಫ್ತು",
+    scanOcrBtn: "ಸ್ಕ್ಯಾನ್ & OCR",
+    mismatchBtn: "ಕಾಗುಣಿತ ಪರೀಕ್ಷೆ",
+    loadSampleBtn: "ಮಾದರಿ ದಾಖಲೆಗಳು",
+    exportBtn: "ಬ್ಯಾಕಪ್",
     importBtn: "ಆಮದು",
-    printSlipBtn: "ಚೆಕ್‌ಲಿಸ್ಟ್ ಪ್ರಿಂಟ್ ಮಾಡಿ",
+    printSlipBtn: "ಚೆಕ್‌ಲಿಸ್ಟ್ ಪ್ರಿಂಟ್",
     emptyTitle: "ನಿಮ್ಮ ವಾಲೆಟ್ ಖಾಲಿಯಾಗಿದೆ",
-    emptySub: "ಗ್ರಾಮ ಪಂಚಾಯತಿ ಕೆಲಸಗಳಿಗಾಗಿ ಆಧಾರ್, ರೇಷನ್ ಕಾರ್ಡ್, ಆದಾಯ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಇಲ್ಲಿ ಸಂಗ್ರಹಿಸಿ.",
-    viewCard: "ಡಿಜಿಟಲ್ ಕಾರ್ಡ್ ವೀಕ್ಷಿಸಿ",
-    editDoc: "ತಿದ್ದುಪಡಿ ಮಾಡಿ",
+    emptySub: "ಗ್ರಾಮ ಕಚೇರಿ ಕೆಲಸಗಳಿಗೆ ಆಧಾರ್, ರೇಷನ್ ಕಾರ್ಡ್, ಕಂದಾಯ ರಸೀದಿಯನ್ನು ಇಲ್ಲಿ ಸೇರಿಸಿ.",
+    viewCard: "ಡಿಜಿಟಲ್ ಕಾರ್ಡ್",
+    editDoc: "ತಿದ್ದುಪಡಿ",
     deleteDoc: "ತೆಗೆದುಹಾಕಿ",
     showNo: "ಸಂಖ್ಯೆ ತೋರಿಸಿ",
     hideNo: "ಸಂಖ್ಯೆ ಮರೆಮಾಡಿ",
     copied: "ನಕಲಿಸಲಾಗಿದೆ!",
-    verifiedBadge: "ಗ್ರಾಮ ಕಚೇರಿ ಮಾನ್ಯತೆ ಪಡೆದಿದೆ",
+    verifiedBadge: "ದೃಢೀಕರಿಸಲಾಗಿದೆ",
     permanentBadge: "ಶಾಶ್ವತ",
     validUntil: "ಮಾನ್ಯತೆಯ ಅವಧಿ:",
     expired: "ಅವಧಿ ಮುಗಿದಿದೆ",
-    openPlanner: "ಈ ದಾಖಲೆಗಳೊಂದಿಗೆ ಯೋಜನೆ ನೋಡಿ",
-    modalAddTitle: "ವಾಲೆಟ್‌ಗೆ ದಾಖಲೆ ಸೇರಿಸಿ",
+    openPlanner: "ಕಚೇರಿ ಯೋಜನೆ ನೋಡಿ",
+    modalAddTitle: "ದಾಖಲೆ ಸೇರಿಸಿ",
     modalEditTitle: "ದಾಖಲೆ ತಿದ್ದುಪಡಿ",
     docTypeSelect: "ದಾಖಲೆಯ ಮಾದರಿ ಆಯ್ಕೆಮಾಡಿ",
     customDocOption: "ಇತರೆ ದಾಖಲೆಗಳು",
@@ -325,27 +333,27 @@ const WALLET_TRANSLATIONS = {
     gender: "ಲಿಂಗ",
     address: "ವಿಳಾಸ",
     category: "ವರ್ಗ",
-    issuingAuthority: "ನೀಡಿದ ಪ್ರಾಧಿಕಾರ / ಕಚೇರಿ",
+    issuingAuthority: "ನೀಡಿದ ಕಚೇರಿ",
     issueDate: "ನೀಡಿದ ದಿನಾಂಕ",
     expiryDate: "ಮುಕ್ತಾಯ ದಿನಾಂಕ",
-    isPermanentCheck: "ಶಾಶ್ವತ ದಾಖಲೆ",
+    isPermanentCheck: "ಶಾಶ್ವತ ದಾಖಲೆ (ಮುಕ್ತಾಯ ದಿನಾಂಕವಿಲ್ಲ)",
     notes: "ಟಿಪ್ಪಣಿಗಳು",
-    notesPlaceholder: "ಉದಾ: ಮೂಲ ದಾಖಲೆ ಮನೆಯಲ್ಲಿ ಹಸಿರು ಫೈಲ್‌ನಲ್ಲಿದೆ.",
+    notesPlaceholder: "ಉದಾ: ಮೂಲ ದಾಖಲೆ ಮನೆಯಲ್ಲಿ ಫೈಲ್‌ನಲ್ಲಿದೆ.",
     attachPhoto: "ಫೋಟೋ ಲಗತ್ತಿಸಿ",
     saveBtn: "ಉಳಿಸಿ",
     cancelBtn: "ರದ್ದುಮಾಡಿ",
     confirmDelete: "ಈ ದಾಖಲೆಯನ್ನು ವಾಲೆಟ್‌ನಿಂದ ತೆಗೆದುಹಾಕಬೇಕೆ?",
-    mismatchTitle: "ದಾಖಲೆಗಳ ಕಾಗುಣಿತ ಹಾಗೂ ವ್ಯತ್ಯಾಸ ಪರೀಕ್ಷೆ",
+    mismatchTitle: "ದಾಖಲೆಗಳ ಕಾಗುಣಿತ ಪರೀಕ್ಷೆ",
     mismatchSub: "ಅರ್ಜಿ ತಿರಸ್ಕೃತವಾಗದಂತೆ ಆಧಾರ್ ಹಾಗೂ ರೇಷನ್ ಕಾರ್ಡ್ ಹೆಸರುಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.",
     noMismatches: "ಎಲ್ಲಾ ದಾಖಲೆಗಳಲ್ಲಿ ಹೆಸರು ಮತ್ತು ದಿನಾಂಕಗಳು ಸರಿಯಾಗಿವೆ!",
-    sampleLoaded: "ಮಾದರಿ ದಾಖಲೆಗಳ ಪ್ಯಾಕೆಟ್ ಲೋಡ್ ಆಗಿದೆ!",
-    cardPreviewTitle: "ಅಧಿಕೃತ ಡಿಜಿಟಲ್ ನಾಗರಿಕ ಸ್ಲಿಪ್",
+    sampleLoaded: "ಮಾದರಿ ದಾಖಲೆಗಳು ಲೋಡ್ ಆಗಿದೆ!",
+    cardPreviewTitle: "ಡಿಜಿಟಲ್ ನಾಗರಿಕ ಸ್ಲಿಪ್",
     printAction: "ಪ್ರಿಂಟ್ / PDF",
     closeModal: "ಮುಚ್ಚಿ"
   }
 };
 
-// Helper icon component map
+// Category icon component map
 const ICON_MAP = {
   Fingerprint,
   ShoppingCart,
@@ -374,7 +382,8 @@ export default function DigitalDocumentWallet({
   onSyncHeldDocs = null,
   className = ""
 }) {
-  const t = WALLET_TRANSLATIONS[language] || WALLET_TRANSLATIONS.en;
+  const currentLang = WALLET_TRANSLATIONS[language] ? language : "en";
+  const t = WALLET_TRANSLATIONS[currentLang];
 
   // Wallet documents state persisted in localStorage & optionally synced to user
   const [documents, setDocuments] = useState(() => {
@@ -429,11 +438,31 @@ export default function DigitalDocumentWallet({
     onSyncHeldDocsRef.current = onSyncHeldDocs;
   }, [onSyncHeldDocs]);
 
+  // Close modals on Escape & lock scroll
+  const isAnyModalOpen = isAddEditModalOpen || previewDoc || isOcrModalOpen || isMismatchModalOpen;
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsAddEditModalOpen(false);
+        setPreviewDoc(null);
+        setIsOcrModalOpen(false);
+        setIsMismatchModalOpen(false);
+      }
+    };
+    if (isAnyModalOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isAnyModalOpen]);
+
   // Persist documents on change and sync with backward-compatible held doc IDs
   useEffect(() => {
     try {
       localStorage.setItem("gramseva_digital_wallet_docs_v2", JSON.stringify(documents));
-      // Sync list of standard type IDs for legacy certificate solver
       const typeIds = documents.map((d) => d.typeId || d.id);
       localStorage.setItem("gramseva_held_docs", JSON.stringify(typeIds));
       if (onSyncHeldDocsRef.current) {
@@ -499,7 +528,7 @@ export default function DigitalDocumentWallet({
     setFormAuthority(doc.issuingAuthority || "");
     setFormIssueDate(doc.issueDate || "");
     setFormExpiryDate(doc.expiryDate === "Permanent" ? "" : doc.expiryDate || "");
-    setFormIsPermanent(doc.isPermanent !== false && doc.expiryDate === "Permanent");
+    setFormIsPermanent(doc.isPermanent !== false && (doc.expiryDate === "Permanent" || !doc.expiryDate));
     setFormNotes(doc.notes || "");
     setFormFileUrl(doc.fileUrl || null);
     setIsAddEditModalOpen(true);
@@ -527,7 +556,7 @@ export default function DigitalDocumentWallet({
       issueDate: formIssueDate || "01/01/2024",
       expiryDate: formIsPermanent ? "Permanent" : (formExpiryDate || "Valid"),
       isPermanent: formIsPermanent,
-      issuingAuthority: formAuthority.trim() || "Government of India / State Dept",
+      issuingAuthority: formAuthority.trim() || "Government Authority",
       status: "verified",
       verificationId: `VER-${Math.floor(100000 + Math.random() * 900000)}`,
       notes: formNotes.trim(),
@@ -565,10 +594,11 @@ export default function DigitalDocumentWallet({
   const handleCopyText = (text, label = "Document Number") => {
     if (!text) return;
     try {
-      navigator.clipboard.writeText(text);
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+      }
       showToast(`${label} copied!`);
     } catch (e) {
-      // Fallback
       showToast(`${label} copied!`);
     }
   };
@@ -640,12 +670,12 @@ export default function DigitalDocumentWallet({
     e.target.value = "";
   };
 
-  // Print Master Checklist / All Documents Slip
+  // Print Master Checklist
   const handlePrintMasterChecklist = () => {
     window.print();
   };
 
-  // OCR Scan Simulation / Handler
+  // OCR Scan Preset Handler
   const handleRunOcrPreset = async (preset) => {
     setIsScanning(true);
     setOcrResult(null);
@@ -690,7 +720,6 @@ export default function DigitalDocumentWallet({
 
   // Mismatch report calculation
   const mismatchReport = useMemo(() => {
-    // Convert current wallet documents into format expected by inspectDocumentMismatches
     const formattedDocs = documents.map((d) => ({
       id: d.id,
       documentTypeId: d.typeId || "custom",
@@ -749,467 +778,478 @@ export default function DigitalDocumentWallet({
   const getCategoryIcon = (category) => {
     const cat = DOCUMENT_CATEGORIES.find((c) => c.id === category);
     const IconComponent = cat?.icon && ICON_MAP[cat.icon] ? ICON_MAP[cat.icon] : FileText;
-    return <IconComponent className="w-4 h-4" />;
+    return <IconComponent className="w-3.5 h-3.5" />;
   };
 
   return (
-    <div className={`digital-wallet-root bg-white border border-stone-200/90 rounded-2xl shadow-xs overflow-hidden ${className}`}>
+    <div className={`digital-wallet-root flex-1 flex flex-col min-h-0 bg-stone-50 text-slate-900 pb-28 ${className}`}>
       {/* Toast Notification */}
       {copyToast && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 flex items-center gap-2 text-xs font-bold animate-bounce">
+        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 flex items-center gap-2 text-xs font-bold animate-fade-in">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{copyToast}</span>
         </div>
       )}
 
-      {/* 1. Header & Civic Identity Banner */}
-      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white p-4 sm:p-6 relative overflow-hidden">
-        {/* Background Emblem Accent Watermark */}
-        <div className="absolute right-2 -bottom-6 opacity-10 pointer-events-none select-none">
-          <ShieldCheck className="w-48 h-48 text-white" />
-        </div>
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 backdrop-blur-md flex items-center justify-center shrink-0 shadow-inner">
-              <FolderCheck className="w-6 h-6 text-emerald-300" />
-            </div>
+      {/* 1. Refined Clean Header Bar */}
+      <div className="bg-white border-b border-stone-200/90 shadow-2xs print:bg-white print:border-none">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full">
-                  DigiLocker & Panchayat Vault
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-extrabold uppercase tracking-wider border border-emerald-200/80 flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-emerald-700" />
+                  {t.badge}
                 </span>
-                <span className="text-[10px] font-bold text-slate-300 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> End-to-End Encrypted & Offline Cached
+                <span className="text-[11px] font-semibold text-slate-500">
+                  DigiLocker & Panchayat Sync
                 </span>
               </div>
-              <h2 className="font-classical text-xl sm:text-2xl font-black text-white tracking-wide mt-0.5">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-classical mt-0.5">
                 {t.title}
-              </h2>
-              <p className="text-xs text-slate-300 font-medium max-w-2xl mt-0.5 leading-relaxed">
+              </h1>
+              <p className="text-xs text-slate-600 max-w-2xl leading-relaxed mt-0.5">
                 {t.subtitle}
               </p>
             </div>
-          </div>
 
-          {/* Quick Action Buttons */}
-          <div className="flex items-center flex-wrap gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleOpenAddModal}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl shadow-sm hover:shadow transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>{t.addDocBtn}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setOcrResult(null);
-                setIsOcrModalOpen(true);
-              }}
-              className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-3 py-2 rounded-xl border border-white/20 transition flex items-center gap-1.5 cursor-pointer backdrop-blur-xs active:scale-95"
-            >
-              <Camera className="w-3.5 h-3.5 text-emerald-300" />
-              <span>{t.scanOcrBtn}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsMismatchModalOpen(true)}
-              className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-3 py-2 rounded-xl border border-white/20 transition flex items-center gap-1.5 cursor-pointer backdrop-blur-xs active:scale-95"
-              title="Inspect cross-document spelling and date of birth consistency"
-            >
-              <AlertCircle className="w-3.5 h-3.5 text-amber-300" />
-              <span>{t.mismatchBtn}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 2. Key Metrics Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5 pt-4 border-t border-white/10">
-          <div className="bg-black/20 backdrop-blur-xs border border-white/10 rounded-xl p-2.5">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">{t.totalDocs}</span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-xl font-black text-white">{stats.total}</span>
-              <span className="text-[10px] text-emerald-300 font-bold">in Vault</span>
-            </div>
-          </div>
-
-          <div className="bg-black/20 backdrop-blur-xs border border-white/10 rounded-xl p-2.5">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">{t.verified}</span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-xl font-black text-emerald-400">{stats.verified}</span>
-              <span className="text-[10px] text-emerald-300 font-bold">Valid & Active</span>
-            </div>
-          </div>
-
-          <div className="bg-black/20 backdrop-blur-xs border border-white/10 rounded-xl p-2.5">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">{t.permanent}</span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-xl font-black text-blue-300">{stats.permanent}</span>
-              <span className="text-[10px] text-slate-300 font-bold">Life-long</span>
-            </div>
-          </div>
-
-          <div className="bg-black/20 backdrop-blur-xs border border-white/10 rounded-xl p-2.5">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">{t.expiringAlert}</span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-xl font-black text-amber-300">{stats.expiring}</span>
-              <span className="text-[10px] text-amber-200 font-bold">Annual Review</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Filter Hub & Search Toolbar */}
-      <div className="p-4 sm:p-5 bg-stone-50 border-b border-stone-200 space-y-3.5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Search Box */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              className="w-full bg-white border border-stone-300 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Secondary Utilities: Print Master, Export, Import, Load Demo */}
-          <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-            <button
-              type="button"
-              onClick={handlePrintMasterChecklist}
-              className="bg-white border border-stone-300 hover:bg-stone-100 text-slate-700 font-bold text-xs px-2.5 py-2 rounded-xl transition flex items-center gap-1 cursor-pointer"
-              title="Print master wallet document checklist"
-            >
-              <Printer className="w-3.5 h-3.5 text-slate-600" />
-              <span className="hidden sm:inline">{t.printSlipBtn}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleExportWallet}
-              className="bg-white border border-stone-300 hover:bg-stone-100 text-slate-700 font-bold text-xs px-2.5 py-2 rounded-xl transition flex items-center gap-1 cursor-pointer"
-              title="Export JSON backup of wallet"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-600" />
-              <span className="hidden sm:inline">{t.exportBtn}</span>
-            </button>
-
-            <label
-              className="bg-white border border-stone-300 hover:bg-stone-100 text-slate-700 font-bold text-xs px-2.5 py-2 rounded-xl transition flex items-center gap-1 cursor-pointer"
-              title="Import JSON backup"
-            >
-              <Upload className="w-3.5 h-3.5 text-slate-600" />
-              <span className="hidden sm:inline">{t.importBtn}</span>
-              <input
-                ref={importFileRef}
-                type="file"
-                accept=".json"
-                onChange={handleImportWallet}
-                className="hidden"
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={handleLoadSamplePacket}
-              className="bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs px-2.5 py-2 rounded-xl transition flex items-center gap-1 cursor-pointer"
-              title="Load realistic sample citizen family packet (Aadhaar, Ration, Income, Land Tax)"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{t.loadSampleBtn}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Category Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {DOCUMENT_CATEGORIES.map((cat) => {
-            const count = cat.id === "all"
-              ? documents.length
-              : documents.filter((d) => d.category === cat.id).length;
-            const isActive = selectedCategory === cat.id;
-
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                  isActive
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-white border border-stone-200 text-slate-600 hover:bg-stone-100"
-                }`}
-              >
-                <span>{cat.label[language] || cat.label.en}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  isActive ? "bg-white/20 text-white" : "bg-stone-100 text-slate-700"
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 4. Document Cards Grid */}
-      <div className="p-4 sm:p-6 bg-white min-h-[260px]">
-        {filteredDocuments.length === 0 ? (
-          <div className="border-2 border-dashed border-stone-200 rounded-2xl p-8 text-center max-w-md mx-auto my-6 space-y-3">
-            <div className="w-14 h-14 bg-stone-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
-              <FolderCheck className="w-7 h-7" />
-            </div>
-            <div>
-              <h3 className="font-classical text-base font-black text-slate-800">
-                {t.emptyTitle}
-              </h3>
-              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                {t.emptySub}
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-2 pt-2">
+            {/* Top Primary Actions */}
+            <div className="flex items-center flex-wrap gap-2 shrink-0 self-start md:self-auto">
               <button
                 type="button"
                 onClick={handleOpenAddModal}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs px-3.5 py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 stroke-[2.5]" />
                 <span>{t.addDocBtn}</span>
               </button>
+
               <button
                 type="button"
-                onClick={handleLoadSamplePacket}
-                className="bg-stone-100 hover:bg-stone-200 text-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer"
+                onClick={() => {
+                  setOcrResult(null);
+                  setIsOcrModalOpen(true);
+                }}
+                className="bg-white hover:bg-stone-100 text-slate-800 font-bold text-xs px-3 py-2 rounded-xl border border-stone-200 shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
               >
-                {t.loadSampleBtn}
+                <Camera className="w-3.5 h-3.5 text-emerald-700" />
+                <span>{t.scanOcrBtn}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsMismatchModalOpen(true)}
+                className={`text-xs font-bold px-3 py-2 rounded-xl border transition flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                  mismatchReport.hasMismatches
+                    ? "bg-amber-50 border-amber-300 text-amber-900 ring-1 ring-amber-400"
+                    : "bg-white hover:bg-stone-100 border-stone-200 text-slate-800"
+                }`}
+                title="Inspect cross-document spelling and date of birth consistency"
+              >
+                <AlertCircle className={`w-3.5 h-3.5 ${mismatchReport.hasMismatches ? "text-amber-600 animate-pulse" : "text-slate-500"}`} />
+                <span>{t.mismatchBtn}</span>
+                {mismatchReport.hasMismatches && (
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                )}
               </button>
             </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredDocuments.map((doc) => {
-              const isRevealed = revealedNumbers[doc.id];
-              const isPermanent = doc.isPermanent || doc.expiryDate === "Permanent";
+        </div>
+      </div>
+
+      {/* Main Container Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 w-full space-y-4">
+        {/* 2. Key Metrics Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-white border border-stone-200/90 p-3.5 rounded-2xl shadow-2xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+              {t.totalDocs}
+            </span>
+            <span className="text-xl font-black text-slate-900 block mt-0.5 font-classical">
+              {stats.total} Records
+            </span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">
+              Encrypted in local locker
+            </span>
+          </div>
+
+          <div className="bg-white border border-stone-200/90 p-3.5 rounded-2xl shadow-2xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+              {t.verified}
+            </span>
+            <span className="text-xl font-black text-emerald-800 block mt-0.5 font-classical">
+              {stats.verified} Verified
+            </span>
+            <span className="text-[10px] font-bold text-emerald-700 block mt-0.5">
+              Active for e-District
+            </span>
+          </div>
+
+          <div className="bg-white border border-stone-200/90 p-3.5 rounded-2xl shadow-2xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+              {t.permanent}
+            </span>
+            <span className="text-xl font-black text-slate-800 block mt-0.5 font-classical">
+              {stats.permanent} Life-long
+            </span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">
+              No expiry renewals
+            </span>
+          </div>
+
+          <div className="bg-white border border-stone-200/90 p-3.5 rounded-2xl shadow-2xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+              {t.expiringAlert}
+            </span>
+            <span className="text-xl font-black text-amber-800 block mt-0.5 font-classical">
+              {stats.expiring} Periodic
+            </span>
+            <span className="text-[10px] font-bold text-amber-700 block mt-0.5">
+              Income / Tax receipts
+            </span>
+          </div>
+        </div>
+
+        {/* 3. Toolbar & Filters */}
+        <div className="bg-white border border-stone-200/90 rounded-2xl p-3.5 shadow-2xs space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Search Box */}
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t.searchPlaceholder}
+                className="w-full bg-stone-50 border border-stone-200 rounded-xl pl-8 pr-8 py-2 text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-emerald-600 focus:bg-white transition"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Secondary Utilities */}
+            <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+              <button
+                type="button"
+                onClick={handlePrintMasterChecklist}
+                className="bg-stone-50 hover:bg-stone-100 border border-stone-200 text-slate-700 font-bold text-xs px-2.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+                title="Print master wallet document checklist"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-600" />
+                <span className="hidden sm:inline">{t.printSlipBtn}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportWallet}
+                className="bg-stone-50 hover:bg-stone-100 border border-stone-200 text-slate-700 font-bold text-xs px-2.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+                title="Export JSON backup of wallet"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-600" />
+                <span className="hidden sm:inline">{t.exportBtn}</span>
+              </button>
+
+              <label
+                className="bg-stone-50 hover:bg-stone-100 border border-stone-200 text-slate-700 font-bold text-xs px-2.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+                title="Import JSON backup"
+              >
+                <Upload className="w-3.5 h-3.5 text-slate-600" />
+                <span className="hidden sm:inline">{t.importBtn}</span>
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportWallet}
+                  className="hidden"
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={handleLoadSamplePacket}
+                className="bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-900 font-bold text-xs px-2.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+                title="Load realistic sample citizen family packet"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                <span>{t.loadSampleBtn}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Category Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+            {DOCUMENT_CATEGORIES.map((cat) => {
+              const count = cat.id === "all"
+                ? documents.length
+                : documents.filter((d) => d.category === cat.id).length;
+              const isActive = selectedCategory === cat.id;
 
               return (
-                <div
-                  key={doc.id}
-                  className="group relative bg-white border border-stone-200 hover:border-emerald-500/80 rounded-2xl p-4 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                    isActive
+                      ? "bg-slate-900 text-white font-black shadow-2xs"
+                      : "bg-stone-100 hover:bg-stone-200 text-slate-700"
+                  }`}
                 >
-                  {/* Top Category Accent Line */}
-                  <div className={`absolute top-0 inset-x-0 h-1 ${
-                    doc.category === "identity" ? "bg-blue-600" :
-                    doc.category === "revenue" ? "bg-emerald-600" :
-                    doc.category === "welfare" ? "bg-amber-500" :
-                    doc.category === "education" ? "bg-purple-600" : "bg-slate-600"
-                  }`} />
-
-                  {/* Header Row */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-start justify-between gap-2 pt-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                          doc.category === "identity" ? "bg-blue-50 text-blue-700 border border-blue-200" :
-                          doc.category === "revenue" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                          doc.category === "welfare" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                          doc.category === "education" ? "bg-purple-50 text-purple-700 border border-purple-200" :
-                          "bg-stone-100 text-slate-700 border border-stone-200"
-                        }`}>
-                          {getCategoryIcon(doc.category)}
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block truncate">
-                            {doc.issuingAuthority || "Government Authority"}
-                          </span>
-                          <h4 className="font-classical text-sm font-black text-slate-900 truncate leading-snug" title={doc.title}>
-                            {doc.title}
-                          </h4>
-                        </div>
-                      </div>
-
-                      {/* Verified Badge */}
-                      <span className="shrink-0 text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200/90 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        <span className="hidden sm:inline">Verified</span>
-                      </span>
-                    </div>
-
-                    {/* Document Number Box (Masked with Eye toggle & Copy) */}
-                    <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-2.5 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 block">
-                          Document ID / Number
-                        </span>
-                        <span className="font-mono text-xs sm:text-sm font-black text-slate-900 tracking-wide block truncate">
-                          {renderMaskedNumber(doc)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => toggleNumberVisibility(doc.id)}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-stone-200 rounded-lg transition"
-                          title={isRevealed ? t.hideNo : t.showNo}
-                        >
-                          {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyText(doc.documentNumber, doc.title)}
-                          className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition"
-                          title="Copy Document Number"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Holder & Metadata Details */}
-                    <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase block">Holder</span>
-                        <span className="font-bold text-slate-800 truncate block text-[11px]">{doc.holderName || "Citizen"}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase block">Validity</span>
-                        <span className={`font-bold block text-[11px] truncate ${
-                          isPermanent ? "text-emerald-700" : "text-amber-700"
-                        }`}>
-                          {isPermanent ? "Permanent (Life-long)" : `Valid: ${doc.expiryDate}`}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Attached Photo Thumbnail (if available) */}
-                    {doc.fileUrl && (
-                      <div className="mt-2 rounded-lg overflow-hidden border border-stone-200 relative max-h-24 bg-stone-100">
-                        <img src={doc.fileUrl} alt={doc.title} className="w-full h-24 object-cover" />
-                        <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                          Scanned Copy Attached
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Remarks / Private Notes */}
-                    {doc.notes && (
-                      <div className="bg-amber-50/60 border border-amber-200/60 rounded-lg p-2 text-[10.5px] text-amber-900 leading-snug">
-                        <span className="font-black text-amber-800 mr-1">Note:</span>
-                        {doc.notes}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card Bottom Actions */}
-                  <div className="pt-3 mt-3 border-t border-stone-100 flex items-center justify-between gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewDoc(doc)}
-                      className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-[11px] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
-                    >
-                      <QrCode className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>{t.viewCard}</span>
-                    </button>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPreviewDoc(doc);
-                          setTimeout(() => window.print(), 300);
-                        }}
-                        className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-stone-100 rounded-lg transition"
-                        title="Print Official Slip"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditModal(doc)}
-                        className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-stone-100 rounded-lg transition"
-                        title={t.editDoc}
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteDocument(doc.id)}
-                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
-                        title={t.deleteDoc}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  <span>{cat.label[language] || cat.label.en}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold ${
+                    isActive ? "bg-white/20 text-white" : "bg-stone-200 text-slate-700"
+                  }`}>
+                    {count}
+                  </span>
+                </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* 4. Document Cards Grid */}
+        <div className="min-h-[260px]">
+          {filteredDocuments.length === 0 ? (
+            <div className="bg-white border-2 border-dashed border-stone-200 rounded-3xl p-8 text-center max-w-md mx-auto my-6 space-y-3 shadow-2xs">
+              <div className="w-12 h-12 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
+                <FolderCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-classical text-base font-black text-slate-900">
+                  {t.emptyTitle}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  {t.emptySub}
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleOpenAddModal}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{t.addDocBtn}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLoadSamplePacket}
+                  className="bg-stone-100 hover:bg-stone-200 text-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer border border-stone-200"
+                >
+                  {t.loadSampleBtn}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {filteredDocuments.map((doc) => {
+                const isRevealed = revealedNumbers[doc.id];
+                const isPermanent = doc.isPermanent || doc.expiryDate === "Permanent";
+
+                return (
+                  <div
+                    key={doc.id}
+                    className="bg-white border border-stone-200/90 hover:border-emerald-400 rounded-2xl p-4 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
+                  >
+                    {/* Header Row */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                            doc.category === "identity" ? "bg-blue-50 text-blue-800 border border-blue-200" :
+                            doc.category === "revenue" ? "bg-emerald-50 text-emerald-800 border border-emerald-200" :
+                            doc.category === "welfare" ? "bg-amber-50 text-amber-800 border border-amber-200" :
+                            doc.category === "education" ? "bg-purple-50 text-purple-800 border border-purple-200" :
+                            "bg-stone-100 text-slate-700 border border-stone-200"
+                          }`}>
+                            {getCategoryIcon(doc.category)}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                              {doc.issuingAuthority || "Government Authority"}
+                            </span>
+                            <h4 className="font-classical text-sm font-black text-slate-900 truncate leading-tight" title={doc.title}>
+                              {doc.title}
+                            </h4>
+                          </div>
+                        </div>
+
+                        {/* Verified Badge */}
+                        <span className="shrink-0 text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                          <span>{t.verifiedBadge}</span>
+                        </span>
+                      </div>
+
+                      {/* Document Number Box */}
+                      <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-2.5 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">
+                            Document / ID Number
+                          </span>
+                          <span className="font-mono text-xs sm:text-sm font-bold text-slate-900 tracking-wide block truncate mt-0.5">
+                            {renderMaskedNumber(doc)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => toggleNumberVisibility(doc.id)}
+                            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-stone-200 rounded-lg transition cursor-pointer"
+                            title={isRevealed ? t.hideNo : t.showNo}
+                          >
+                            {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(doc.documentNumber, doc.title)}
+                            className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition cursor-pointer"
+                            title="Copy Document Number"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Holder & Validity Details */}
+                      <div className="grid grid-cols-2 gap-2 text-xs pt-0.5">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block">Holder</span>
+                          <span className="font-bold text-slate-800 truncate block text-[11px] mt-0.5">{doc.holderName || "Citizen"}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block">Validity</span>
+                          <span className={`font-bold block text-[11px] truncate mt-0.5 ${
+                            isPermanent ? "text-emerald-800" : "text-amber-800"
+                          }`}>
+                            {isPermanent ? t.permanentBadge : `${t.validUntil} ${doc.expiryDate}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Attached Photo Thumbnail (if available) */}
+                      {doc.fileUrl && (
+                        <div className="rounded-xl overflow-hidden border border-stone-200 relative max-h-24 bg-stone-100">
+                          <img src={doc.fileUrl} alt={doc.title} className="w-full h-24 object-cover" />
+                          <div className="absolute bottom-1 right-1 bg-black/70 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                            Attached Scanned Copy
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Remarks / Private Notes */}
+                      {doc.notes && (
+                        <div className="bg-amber-50/60 border border-amber-200/60 rounded-xl p-2 text-[11px] text-amber-900 leading-snug">
+                          <span className="font-black text-amber-800 mr-1">Note:</span>
+                          {doc.notes}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Bottom Actions */}
+                    <div className="pt-3 mt-3 border-t border-stone-100 flex items-center justify-between gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewDoc(doc)}
+                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-[11px] px-2.5 py-1.5 rounded-lg border border-emerald-200 transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <QrCode className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>{t.viewCard}</span>
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewDoc(doc);
+                            setTimeout(() => window.print(), 300);
+                          }}
+                          className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-stone-100 rounded-lg transition cursor-pointer"
+                          title="Print Official Slip"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(doc)}
+                          className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-stone-100 rounded-lg transition cursor-pointer"
+                          title={t.editDoc}
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDocument(doc.id)}
+                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                          title={t.deleteDoc}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 5. Zero-Turnaround Certificate Navigator Banner */}
+        {onOpenResolver && (
+          <div className="p-4 bg-emerald-50/90 border border-emerald-200/90 rounded-2xl shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-emerald-200" />
+              </div>
+              <div>
+                <h4 className="font-classical text-xs font-black text-slate-900">
+                  Applying for Certificates & Land Papers?
+                </h4>
+                <p className="text-[11px] text-slate-600 font-medium">
+                  Your saved wallet documents ({documents.length} held) are automatically synchronized with the Zero-Turnaround Office Navigator.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onOpenResolver}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer active:scale-95"
+            >
+              <span>{t.openPlanner}</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
 
-      {/* 5. Citizen Certificate Scheme Resolver Link Bar */}
-      {onOpenResolver && (
-        <div className="p-4 bg-emerald-50/80 border-t border-emerald-200/80 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="font-classical text-xs font-black text-slate-900">
-                Are you applying for Income, Caste, or Housing Certificates?
-              </h4>
-              <p className="text-[11px] text-slate-600 font-medium">
-                Your saved wallet documents ({documents.length} held) are automatically synchronized with the Zero-Turnaround Office Navigator.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onOpenResolver}
-            className="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer active:scale-95"
-          >
-            <span>{t.openPlanner}</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
       {/* ========================================================================= */}
-      {/* MODAL 1: ADD / EDIT DOCUMENT MODAL */}
+      {/* PORTAL MODAL 1: ADD / EDIT DOCUMENT MODAL */}
       {/* ========================================================================= */}
-      {isAddEditModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      {isAddEditModalOpen && createPortal(
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white border border-stone-200 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-soft-rise">
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 to-emerald-950 text-white flex items-center justify-between">
+            <div className="p-4 sm:p-5 bg-white border-b border-stone-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-800">
                   <FolderCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-classical text-base font-black text-white">
+                  <h3 className="font-classical text-base font-black text-slate-900">
                     {editingDoc ? t.modalEditTitle : t.modalAddTitle}
                   </h3>
-                  <span className="text-[11px] text-slate-300">
+                  <span className="text-[11px] text-slate-500">
                     Store details securely in your offline-first GramSeva locker
                   </span>
                 </div>
@@ -1218,7 +1258,7 @@ export default function DigitalDocumentWallet({
               <button
                 type="button"
                 onClick={() => setIsAddEditModalOpen(false)}
-                className="text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-stone-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1239,11 +1279,11 @@ export default function DigitalDocumentWallet({
                       onClick={() => handlePresetSelect(preset.id)}
                       className={`p-2 rounded-xl text-left border text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
                         formType === preset.id
-                          ? "bg-emerald-50 border-emerald-600 text-emerald-950 ring-1 ring-emerald-500"
+                          ? "bg-emerald-50 border-emerald-500 text-emerald-950 ring-1 ring-emerald-400"
                           : "bg-stone-50 border-stone-200 text-slate-700 hover:bg-stone-100"
                       }`}
                     >
-                      <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${formType === preset.id ? "bg-emerald-700" : "bg-slate-300"}`} />
                       <span className="truncate">{preset.name[language] || preset.name.en}</span>
                     </button>
                   ))}
@@ -1252,7 +1292,7 @@ export default function DigitalDocumentWallet({
                     onClick={() => handlePresetSelect("custom")}
                     className={`p-2 rounded-xl text-left border text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
                       formType === "custom"
-                        ? "bg-emerald-50 border-emerald-600 text-emerald-950 ring-1 ring-emerald-500"
+                        ? "bg-emerald-50 border-emerald-500 text-emerald-950 ring-1 ring-emerald-400"
                         : "bg-stone-50 border-stone-200 text-slate-700 hover:bg-stone-100"
                     }`}
                   >
@@ -1263,7 +1303,7 @@ export default function DigitalDocumentWallet({
               </div>
 
               {/* Title and ID Number */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="text-[11px] font-black text-slate-700 uppercase tracking-wider block mb-1">
                     {t.docTitle} *
@@ -1274,7 +1314,7 @@ export default function DigitalDocumentWallet({
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
                     placeholder="e.g. Aadhaar Card"
-                    className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:bg-white focus:outline-none focus:border-emerald-600 transition"
                   />
                 </div>
 
@@ -1288,7 +1328,7 @@ export default function DigitalDocumentWallet({
                     value={formNumber}
                     onChange={(e) => setFormNumber(e.target.value)}
                     placeholder="e.g. 7821 4590 1284"
-                    className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-600 transition"
                   />
                 </div>
               </div>
@@ -1304,7 +1344,7 @@ export default function DigitalDocumentWallet({
                     value={formHolder}
                     onChange={(e) => setFormHolder(e.target.value)}
                     placeholder="e.g. Rajesh V"
-                    className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600 transition"
                   />
                 </div>
 
@@ -1317,7 +1357,7 @@ export default function DigitalDocumentWallet({
                     value={formGuardian}
                     onChange={(e) => setFormGuardian(e.target.value)}
                     placeholder="e.g. Father / Guardian name"
-                    className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600 transition"
                   />
                 </div>
               </div>
@@ -1333,7 +1373,7 @@ export default function DigitalDocumentWallet({
                     value={formDob}
                     onChange={(e) => setFormDob(e.target.value)}
                     placeholder="14/08/1992"
-                    className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600 transition"
                   />
                 </div>
 
@@ -1344,7 +1384,7 @@ export default function DigitalDocumentWallet({
                   <select
                     value={formGender}
                     onChange={(e) => setFormGender(e.target.value)}
-                    className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600 transition"
                   >
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
@@ -1360,7 +1400,7 @@ export default function DigitalDocumentWallet({
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600 transition"
                   >
                     {DOCUMENT_CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
                       <option key={cat.id} value={cat.id}>
@@ -1382,7 +1422,7 @@ export default function DigitalDocumentWallet({
                     value={formAuthority}
                     onChange={(e) => setFormAuthority(e.target.value)}
                     placeholder="e.g. Village Office Azhiyur"
-                    className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600 transition"
                   />
                 </div>
 
@@ -1395,13 +1435,13 @@ export default function DigitalDocumentWallet({
                     value={formAddress}
                     onChange={(e) => setFormAddress(e.target.value)}
                     placeholder="Door No, Ward, Village"
-                    className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600 transition"
                   />
                 </div>
               </div>
 
               {/* Issue Date & Validity */}
-              <div className="p-3 bg-stone-50 border border-stone-200 rounded-2xl space-y-2.5">
+              <div className="p-3.5 bg-stone-50 border border-stone-200 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-black text-slate-800 uppercase tracking-wider">
                     Validity & Expiry Rules
@@ -1458,7 +1498,7 @@ export default function DigitalDocumentWallet({
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
                   placeholder={t.notesPlaceholder}
-                  className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600 transition"
                 />
               </div>
 
@@ -1485,8 +1525,8 @@ export default function DigitalDocumentWallet({
                   />
                   {formFileUrl && (
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Image Attached
+                      <span className="text-xs text-emerald-800 font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" /> Image Attached
                       </span>
                       <button
                         type="button"
@@ -1501,7 +1541,7 @@ export default function DigitalDocumentWallet({
               </div>
 
               {/* Footer Buttons */}
-              <div className="pt-4 border-t border-stone-200 flex items-center justify-end gap-2.5">
+              <div className="pt-3 border-t border-stone-200 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsAddEditModalOpen(false)}
@@ -1511,27 +1551,28 @@ export default function DigitalDocumentWallet({
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow-xs hover:shadow transition cursor-pointer"
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow-xs transition cursor-pointer"
                 >
                   {t.saveBtn}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 2: DIGITAL CITIZEN SMART CARD & PRINTABLE SLIP PREVIEW */}
+      {/* PORTAL MODAL 2: DIGITAL CITIZEN SMART CARD & PRINTABLE SLIP PREVIEW */}
       {/* ========================================================================= */}
-      {previewDoc && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      {previewDoc && createPortal(
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white border border-stone-200 rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-soft-rise">
             {/* Header */}
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+            <div className="p-4 bg-white border-b border-stone-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <h3 className="font-classical text-base font-black text-white">
+                <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                <h3 className="font-classical text-base font-black text-slate-900">
                   {t.cardPreviewTitle}
                 </h3>
               </div>
@@ -1540,7 +1581,7 @@ export default function DigitalDocumentWallet({
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition cursor-pointer"
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition cursor-pointer shadow-xs"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>{t.printAction}</span>
@@ -1548,7 +1589,7 @@ export default function DigitalDocumentWallet({
                 <button
                   type="button"
                   onClick={() => setPreviewDoc(null)}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg transition"
+                  className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-stone-100 transition cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1556,24 +1597,18 @@ export default function DigitalDocumentWallet({
             </div>
 
             {/* Printable Digital Card Content */}
-            <div className="p-6 overflow-y-auto print:p-0 print:m-0 space-y-6">
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
               {/* SKEUOMORPHIC GOVERNMENT CITIZEN SMART CARD */}
-              <div className="relative bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-emerald-400/40 overflow-hidden">
-                {/* Security Hologram Strip & Watermarks */}
-                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-b from-amber-400/20 via-emerald-400/20 to-purple-400/20 border-l border-white/10 pointer-events-none" />
-                <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
-                  <ShieldCheck className="w-44 h-44 text-white" />
-                </div>
-
+              <div className="relative bg-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-lg border border-slate-700 overflow-hidden">
                 <div className="relative z-10 space-y-4">
                   {/* Card Top Title & State Crest */}
                   <div className="flex items-center justify-between border-b border-white/15 pb-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-amber-300">
+                      <div className="w-7 h-7 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-emerald-400">
                         <Landmark className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-amber-300 block">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 block">
                           Government of India / State Civic Record
                         </span>
                         <h4 className="font-classical text-sm sm:text-base font-black text-white leading-tight">
@@ -1583,13 +1618,13 @@ export default function DigitalDocumentWallet({
                     </div>
 
                     <div className="text-right">
-                      <span className="text-[9px] font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-400/40 px-2 py-0.5 rounded-full block">
-                        Verified Citizen Vault
+                      <span className="text-[9px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded-md block">
+                        Verified Vault Record
                       </span>
                     </div>
                   </div>
 
-                  {/* Card Center: Chip, QR & Details */}
+                  {/* Card Center: QR & Details */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-2 flex-1">
                       <div>
@@ -1637,13 +1672,13 @@ export default function DigitalDocumentWallet({
                     </div>
                   </div>
 
-                  {/* Card Bottom: Document Number & Barcode */}
+                  {/* Card Bottom: Document Number */}
                   <div className="pt-3 border-t border-white/15 flex items-center justify-between gap-2">
                     <div>
                       <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">
                         Official Document ID
                       </span>
-                      <span className="font-mono text-sm sm:text-base font-black text-amber-300 tracking-wider">
+                      <span className="font-mono text-sm sm:text-base font-black text-emerald-400 tracking-wider">
                         {previewDoc.documentNumber}
                       </span>
                     </div>
@@ -1658,8 +1693,8 @@ export default function DigitalDocumentWallet({
                 </div>
               </div>
 
-              {/* OFFICIAL RECEIPT TABLE SLIP (For Office Visits) */}
-              <div className="border border-stone-300 rounded-2xl p-4 bg-stone-50 space-y-3 text-xs text-slate-800">
+              {/* OFFICIAL RECEIPT TABLE SLIP */}
+              <div className="border border-stone-200 rounded-2xl p-4 bg-stone-50 space-y-3 text-xs text-slate-800">
                 <div className="flex items-center justify-between border-b border-stone-200 pb-2">
                   <span className="font-black text-slate-900 uppercase text-[10px] tracking-wider">
                     Panchayat Counter Verification Receipt
@@ -1702,11 +1737,11 @@ export default function DigitalDocumentWallet({
             </div>
 
             {/* Modal Bottom Actions */}
-            <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
+            <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between shrink-0">
               <button
                 type="button"
                 onClick={() => handleCopyText(`${previewDoc.title}: ${previewDoc.documentNumber} (${previewDoc.holderName})`, previewDoc.title)}
-                className="bg-white border border-stone-300 hover:bg-stone-100 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+                className="bg-white border border-stone-300 hover:bg-stone-100 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>Copy Summary</span>
@@ -1721,26 +1756,27 @@ export default function DigitalDocumentWallet({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 3: OCR CAMERA & PHOTO SCANNER */}
+      {/* PORTAL MODAL 3: OCR CAMERA & PHOTO SCANNER */}
       {/* ========================================================================= */}
-      {isOcrModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      {isOcrModalOpen && createPortal(
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white border border-stone-200 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-soft-rise">
             {/* Header */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 to-teal-950 text-white flex items-center justify-between">
+            <div className="p-4 sm:p-5 bg-white border-b border-stone-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-800">
                   <Camera className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-classical text-base font-black text-white">
+                  <h3 className="font-classical text-base font-black text-slate-900">
                     {t.scanOcrBtn}
                   </h3>
-                  <span className="text-[11px] text-slate-300">
+                  <span className="text-[11px] text-slate-500">
                     Extracts Name, DOB, and ID Numbers automatically from photographed cards
                   </span>
                 </div>
@@ -1749,7 +1785,7 @@ export default function DigitalDocumentWallet({
               <button
                 type="button"
                 onClick={() => setIsOcrModalOpen(false)}
-                className="text-slate-300 hover:text-white p-1.5 rounded-lg transition"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-stone-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1770,7 +1806,7 @@ export default function DigitalDocumentWallet({
                       onClick={() => handleRunOcrPreset(preset)}
                       className={`p-2.5 rounded-2xl border text-left text-xs font-bold transition flex flex-col items-center text-center gap-1.5 cursor-pointer ${
                         ocrResult?.id === preset.id
-                          ? "bg-emerald-50 border-emerald-600 text-emerald-950 ring-2 ring-emerald-500/20"
+                          ? "bg-emerald-50 border-emerald-500 text-emerald-950 ring-2 ring-emerald-400"
                           : "bg-stone-50 border-stone-200 text-slate-700 hover:bg-stone-100"
                       }`}
                     >
@@ -1784,20 +1820,20 @@ export default function DigitalDocumentWallet({
               {/* OCR Scanning state */}
               {isScanning && (
                 <div className="p-6 bg-stone-50 rounded-2xl border border-stone-200 text-center space-y-2 animate-pulse">
-                  <RefreshCw className="w-6 h-6 text-emerald-600 animate-spin mx-auto" />
+                  <RefreshCw className="w-6 h-6 text-emerald-700 animate-spin mx-auto" />
                   <p className="text-xs font-bold text-slate-800">Analyzing document geometry & running optical character recognition...</p>
                 </div>
               )}
 
               {/* OCR Result View */}
               {ocrResult && (
-                <div className="bg-emerald-50/70 border border-emerald-300 rounded-2xl p-4 space-y-3">
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-emerald-900 uppercase flex items-center gap-1.5">
+                    <span className="text-xs font-black text-emerald-950 uppercase flex items-center gap-1.5">
                       <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                       Extraction Completed ({ocrResult.extractedData.confidence}% Confidence)
                     </span>
-                    <span className="text-[10px] font-bold bg-emerald-200/70 text-emerald-900 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-md border border-emerald-200">
                       Ready to Import
                     </span>
                   </div>
@@ -1813,7 +1849,7 @@ export default function DigitalDocumentWallet({
                     </div>
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 block">Document ID</span>
-                      <span className="font-mono font-bold text-emerald-700">{ocrResult.extractedData.documentNumber}</span>
+                      <span className="font-mono font-bold text-emerald-800">{ocrResult.extractedData.documentNumber}</span>
                     </div>
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 block">Gender</span>
@@ -1828,7 +1864,7 @@ export default function DigitalDocumentWallet({
                   <button
                     type="button"
                     onClick={handleImportOcrResult}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs py-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Import Directly Into Digital Wallet</span>
@@ -1838,7 +1874,7 @@ export default function DigitalDocumentWallet({
             </div>
 
             {/* Modal Bottom Actions */}
-            <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-end">
+            <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setIsOcrModalOpen(false)}
@@ -1848,26 +1884,27 @@ export default function DigitalDocumentWallet({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 4: CROSS-DOCUMENT SPELLING & MISMATCH INSPECTOR */}
+      {/* PORTAL MODAL 4: CROSS-DOCUMENT SPELLING & MISMATCH INSPECTOR */}
       {/* ========================================================================= */}
-      {isMismatchModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      {isMismatchModalOpen && createPortal(
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white border border-stone-200 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-soft-rise">
             {/* Header */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 to-amber-950 text-white flex items-center justify-between">
+            <div className="p-4 sm:p-5 bg-white border-b border-stone-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-800">
                   <AlertCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-classical text-base font-black text-white">
+                  <h3 className="font-classical text-base font-black text-slate-900">
                     {t.mismatchTitle}
                   </h3>
-                  <span className="text-[11px] text-slate-300">
+                  <span className="text-[11px] text-slate-500">
                     {t.mismatchSub}
                   </span>
                 </div>
@@ -1876,7 +1913,7 @@ export default function DigitalDocumentWallet({
               <button
                 type="button"
                 onClick={() => setIsMismatchModalOpen(false)}
-                className="text-slate-300 hover:text-white p-1.5 rounded-lg transition"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-stone-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1904,7 +1941,7 @@ export default function DigitalDocumentWallet({
                         <span className="font-black text-xs text-amber-900 uppercase tracking-wider">
                           {issue.title}
                         </span>
-                        <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md border border-amber-200">
                           Action Required
                         </span>
                       </div>
@@ -1919,8 +1956,8 @@ export default function DigitalDocumentWallet({
                   ))}
                 </div>
               ) : (
-                <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-6 text-center space-y-2">
-                  <ShieldCheck className="w-10 h-10 text-emerald-600 mx-auto" />
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-2">
+                  <ShieldCheck className="w-10 h-10 text-emerald-700 mx-auto" />
                   <h4 className="font-classical text-base font-black text-emerald-950">
                     {t.noMismatches}
                   </h4>
@@ -1932,7 +1969,7 @@ export default function DigitalDocumentWallet({
             </div>
 
             {/* Modal Bottom Actions */}
-            <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-end">
+            <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setIsMismatchModalOpen(false)}
@@ -1942,7 +1979,8 @@ export default function DigitalDocumentWallet({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

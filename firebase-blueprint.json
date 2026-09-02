@@ -10,6 +10,7 @@
         "email": { "type": "string" },
         "phone": { "type": "string" },
         "role": { "type": "string" },
+        "isAdmin": { "type": "boolean" },
         "district": { "type": "string" },
         "locality": { "type": "string" },
         "aadhaarLast4": { "type": "string" },
@@ -17,6 +18,41 @@
         "createdAt": { "type": "string" }
       },
       "required": ["uid", "name", "email"]
+    },
+    "grievances": {
+      "title": "Grievances",
+      "description": "Citizen grievances and moderation timeline",
+      "type": "object",
+      "properties": {
+        "ticketId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string" },
+        "priority": { "type": "string" },
+        "ward": { "type": "string" },
+        "panchayat": { "type": "string" },
+        "district": { "type": "string" },
+        "state": { "type": "string" },
+        "officerName": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["ticketId", "title", "status"]
+    },
+    "broadcasts": {
+      "title": "Broadcasts",
+      "description": "Emergency alerts and civic notices dispatched by admins",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "severity": { "type": "string" },
+        "ward": { "type": "string" },
+        "panchayat": { "type": "string" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "message", "severity"]
     }
   }
 }

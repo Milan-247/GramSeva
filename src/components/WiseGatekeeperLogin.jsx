@@ -76,6 +76,7 @@ const STATE_MAP = {
 export default function WiseGatekeeperLogin({
   onLoginSuccess,
   onGuestAccess,
+  onOpenAdminLogin,
   selectedState = "kerala",
   onStateChange,
   selectedDistrict = "Kozhikode",
@@ -89,6 +90,18 @@ export default function WiseGatekeeperLogin({
   const [authError, setAuthError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [secretClickCount, setSecretClickCount] = useState(0);
+
+  const handleSecretSealClick = () => {
+    const next = secretClickCount + 1;
+    if (next >= 3) {
+      setSecretClickCount(0);
+      onOpenAdminLogin?.();
+    } else {
+      setSecretClickCount(next);
+      setTimeout(() => setSecretClickCount(0), 1800);
+    }
+  };
 
   // State selection option
   const [currentState, setCurrentState] = useState(
@@ -304,14 +317,25 @@ export default function WiseGatekeeperLogin({
 
           {/* Circular Badge Seal (Reference Design) */}
           <div className="hidden lg:flex justify-end my-2">
-            <div className="p-1.5 rounded-full border border-slate-700/80 bg-slate-900/40 backdrop-blur-xs">
+            <button
+              type="button"
+              onClick={handleSecretSealClick}
+              className="p-1.5 rounded-full border border-slate-700/80 bg-slate-900/40 backdrop-blur-xs cursor-pointer hover:border-amber-500/50 transition active:scale-95"
+              title="Official Panchayat Registry Seal"
+            >
               <GraamSevaSeal className="w-24 h-24 filter drop-shadow-lg" showText={true} />
-            </div>
+            </button>
           </div>
 
           {/* Bottom Footer Note */}
           <div className="relative z-10 text-[11px] font-mono text-slate-400 pt-3 sm:pt-4 border-t border-slate-800/80 flex items-center justify-between">
-            <span>GramSeva • Citizen Portal</span>
+            <span
+              onClick={handleSecretSealClick}
+              className="cursor-pointer hover:text-slate-200 transition select-none"
+              title="Registry System"
+            >
+              GramSeva • Citizen Portal
+            </span>
             <button
               type="button"
               onClick={onGuestAccess}

@@ -129,6 +129,9 @@ const CertificateResolver = lazy(() => import("./components/CertificateResolver.
 const GrievanceTracker = lazy(() => import("./components/GrievanceTracker.jsx"));
 const DigitalDocumentWallet = lazy(() => import("./components/DigitalDocumentWallet.jsx"));
 const UserProfileHub = lazy(() => import("./components/UserProfileHub.jsx"));
+const ServiceContributionHub = lazy(() => import("./components/ServiceContributionHub.jsx"));
+const AdminConsole = lazy(() => import("./components/AdminConsole.jsx"));
+import AdminLoginModal from "./components/AdminLoginModal.jsx";
 
 function DirectoryApp() {
   const { language, setLanguage, t, supportedLanguages } = useLanguage();
@@ -146,6 +149,54 @@ function DirectoryApp() {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Hidden Panchayat Officer / Admin State
+  const [adminUser, setAdminUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("gramseva_admin_session");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
+
+  // Hidden Admin Keyboard Shortcut: Ctrl+Shift+A or Cmd+Shift+A or Alt+A
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "A" || e.key === "a")) ||
+        (e.altKey && (e.key === "A" || e.key === "a"))
+      ) {
+        e.preventDefault();
+        setShowAdminLoginModal((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Hidden Admin URL Hash trigger: #admin or #officer
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window.location.hash === "#admin" || window.location.hash === "#officer")) {
+      setShowAdminLoginModal(true);
+    }
+  }, []);
+
+  // Secret Triple-Click on Header Title / Brand to open Officer Gateway
+  const headerClicksRef = useRef({ count: 0, timer: null });
+  const handleSecretHeaderClick = () => {
+    headerClicksRef.current.count += 1;
+    if (headerClicksRef.current.count === 1) {
+      headerClicksRef.current.timer = setTimeout(() => {
+        headerClicksRef.current.count = 0;
+      }, 1600);
+    } else if (headerClicksRef.current.count >= 3) {
+      clearTimeout(headerClicksRef.current.timer);
+      headerClicksRef.current.count = 0;
+      setShowAdminLoginModal(true);
+    }
+  };
 
   // QOL #5: Recent Search History State
   const [recentSearches, setRecentSearches] = useState(() => {
@@ -724,6 +775,16 @@ function DirectoryApp() {
   const [newDistrict, setNewDistrict] = useState("Kozhikode");
   const [newLocality, setNewLocality] = useState("Mukkali");
   const [successToast, setSuccessToast] = useState(null);
+
+  // Auto-dismiss floating toast notifications after 2.8s
+  useEffect(() => {
+    if (successToast) {
+      const timer = setTimeout(() => {
+        setSuccessToast(null);
+      }, 2800);
+      return () => clearTimeout(timer);
+    }
+  }, [successToast]);
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedServices = localStorage.getItem("village_custom_services");
@@ -823,6 +884,32 @@ function DirectoryApp() {
     setSuccessToast("Service suggested successfully!");
     setTimeout(() => setSuccessToast(null), 3e3);
     navigateToTab("services");
+  };
+
+  const handleAddCustomService = (newService) => {
+    setServices((prev) => [newService, ...prev]);
+    try {
+      const existing = JSON.parse(localStorage.getItem("village_custom_services") || "[]");
+      const updated = [newService, ...existing.filter((s) => s.id !== newService.id)];
+      localStorage.setItem("village_custom_services", JSON.stringify(updated));
+    } catch (err) {
+      console.error("Error saving custom service", err);
+    }
+    setSuccessToast("Service contributed & published to directory!");
+    setTimeout(() => setSuccessToast(null), 3000);
+  };
+
+  const handleDeleteCustomService = (serviceId) => {
+    setServices((prev) => prev.filter((s) => s.id !== serviceId));
+    try {
+      const existing = JSON.parse(localStorage.getItem("village_custom_services") || "[]");
+      const updated = existing.filter((s) => s.id !== serviceId);
+      localStorage.setItem("village_custom_services", JSON.stringify(updated));
+    } catch (err) {
+      console.error("Error deleting custom service", err);
+    }
+    setSuccessToast("Service removed from community list.");
+    setTimeout(() => setSuccessToast(null), 3000);
   };
   const getCategoryIcon = (categoryKey) => {
     switch (categoryKey) {
@@ -1271,19 +1358,36 @@ Phone: ${service.phoneNumber}`;
     { id: "family health centre", label: "Family Health Centre", helper: t.health || "Health" }
   ];
 
-  if (!currentUser && !isGuestAllowed) {
+  if (!currentUser && !isGuestAllowed && !adminUser) {
     return (
-      <WiseGatekeeperLogin
-        onLoginSuccess={() => setIsGuestAllowed(true)}
-        onGuestAccess={() => setIsGuestAllowed(true)}
-        selectedState={selectedState}
-        onStateChange={setSelectedState}
-        selectedDistrict={selectedDistrict}
-        selectedLocality={selectedLocality}
-        setSuccessToast={setSuccessToast}
-        districtsList={KERALA_DISTRICTS_LIST}
-        panchayatsByDistrict={KERALA_PANCHAYATS_BY_DISTRICT}
-      />
+      <>
+        <WiseGatekeeperLogin
+          onLoginSuccess={() => setIsGuestAllowed(true)}
+          onGuestAccess={() => setIsGuestAllowed(true)}
+          onOpenAdminLogin={() => setShowAdminLoginModal(true)}
+          selectedState={selectedState}
+          onStateChange={setSelectedState}
+          selectedDistrict={selectedDistrict}
+          selectedLocality={selectedLocality}
+          setSuccessToast={setSuccessToast}
+          districtsList={KERALA_DISTRICTS_LIST}
+          panchayatsByDistrict={KERALA_PANCHAYATS_BY_DISTRICT}
+        />
+        <AdminLoginModal
+          isOpen={showAdminLoginModal}
+          onClose={() => setShowAdminLoginModal(false)}
+          onAdminAuthenticated={(adminData) => {
+            setAdminUser(adminData);
+            try { localStorage.setItem("gramseva_admin_session", JSON.stringify(adminData)); } catch {}
+            setIsGuestAllowed(true);
+            setCurrentTab("admin");
+            setSuccessToast(`Authorized as ${adminData.name}`);
+          }}
+          currentLocality={selectedLocality === "all" ? "Azhiyur" : selectedLocality}
+          currentDistrict={selectedDistrict === "all" ? "Kozhikode" : selectedDistrict}
+          currentState={selectedState}
+        />
+      </>
     );
   }
 
@@ -1301,7 +1405,11 @@ Phone: ${service.phoneNumber}`;
           {/* Panchayat Branding Row */}
           <div className="flex flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="flex items-center gap-2 min-w-0">
+              <div
+                onClick={handleSecretHeaderClick}
+                className="flex items-center gap-2 min-w-0 cursor-pointer select-none"
+                title="GramSeva Panchayat Hub (Triple-click for Officer Gateway)"
+              >
                 <h1 className="font-serif font-bold text-xl sm:text-2xl text-white tracking-tight shrink-0">
                   GramSeva
                 </h1>
@@ -2301,182 +2409,25 @@ Phone: ${service.phoneNumber}`;
               </Suspense>
             </div>
           )}
-          {currentTab === "suggest" && <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-4 md:pt-6 pb-24 scrollbar-none bg-white text-slate-900">
-              <div className="border-b border-stone-200 pb-3 max-w-5xl mx-auto">
-                <h3 className="font-classical text-lg font-black text-slate-900 tracking-wide flex items-center gap-1.5">
-                  <Plus className="w-4 h-4 text-emerald-700" />
-                  <span>{t.addServiceTitle || "Suggest Service"}</span>
-                </h3>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  Contribute details about essential community assets. Your submissions are cached instantly.
-                </p>
-              </div>
-
-              <form onSubmit={handleAddService} className="max-w-5xl mx-auto mt-4 grid gap-3.5 text-xs md:grid-cols-2">
-                
-                <div className="md:col-span-2">
-                  <label htmlFor="suggest-service-title" className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                    Service Title *
-                  </label>
-                  <input
-    id="suggest-service-title"
-    type="text"
-    required
-    placeholder="e.g. Primary Health Centre Subcenter"
-    value={newTitle}
-    onChange={(e) => setNewTitle(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
-  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:col-span-2">
-                  <div>
-                    <label htmlFor="suggest-service-category" className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                      Category *
-                    </label>
-                    <select
-    id="suggest-service-category"
-    value={newCategory}
-    onChange={(e) => setNewCategory(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 rounded-xl px-2 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
-  >
-                      <option value="health">{t.health || "Health"}</option>
-                      <option value="water">{t.water || "Water"}</option>
-                      <option value="agriculture">{t.agriculture || "Agriculture"}</option>
-                      <option value="education">{t.education || "Education"}</option>
-                      <option value="government">{t.government || "Government"}</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="suggest-service-phone" className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                      Phone Number *
-                    </label>
-                    <input
-    id="suggest-service-phone"
-    type="tel"
-    required
-    placeholder="+91 XXXXX XXXXX"
-    value={newPhone}
-    onChange={(e) => setNewPhone(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
-  />
-                  </div>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label htmlFor="suggest-service-description" className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                    Description & Service details *
-                  </label>
-                  <textarea
-    id="suggest-service-description"
-    required
-    rows={2.5}
-    placeholder="Describe what help, documents, or aids are provided here..."
-    value={newDesc}
-    onChange={(e) => setNewDesc(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white resize-none leading-relaxed transition"
-  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:col-span-2">
-                  <div>
-                    <label htmlFor="suggest-service-hours" className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                      Operating Hours
-                    </label>
-                    <input
-    id="suggest-service-hours"
-    type="text"
-    placeholder="e.g. 9:00 AM - 4:00 PM"
-    value={newHours}
-    onChange={(e) => setNewHours(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
-  />
-                  </div>
-                  <div>
-                    <label htmlFor="suggest-service-contact" className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                      Contact Name
-                    </label>
-                    <input
-    id="suggest-service-contact"
-    type="text"
-    placeholder="e.g. Sister Lakshmi"
-    value={newContact}
-    onChange={(e) => setNewContact(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
-  />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:col-span-2">
-                  <div>
-                    <label htmlFor="suggest-service-district" className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                      District
-                    </label>
-                    <select
-    id="suggest-service-district"
-    value={newDistrict}
-    onChange={(e) => {
-      setNewDistrict(e.target.value);
-      const locals = LOCALITIES_EN[e.target.value] || [];
-      setNewLocality(locals[0] || "");
-    }}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 rounded-xl px-2 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
-  >
-                      {KERALA_DISTRICTS.map((d, idx) => <option key={`kerala_dist_${d.en}_${idx}`} value={d.en}>{d.en}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="suggest-service-locality" className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                      Locality
-                    </label>
-                    <select
-    id="suggest-service-locality"
-    value={newLocality}
-    onChange={(e) => setNewLocality(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 rounded-xl px-2 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
-  >
-                      {(LOCALITIES_EN[newDistrict] || []).map((loc, idx) => <option key={`kerala_loc_${loc}_${idx}`} value={loc}>{loc}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label htmlFor="suggest-service-address" className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                    Landmark / Address
-                  </label>
-                  <input
-    id="suggest-service-address"
-    type="text"
-    placeholder="e.g. Opposite Local Library block"
-    value={newLocation}
-    onChange={(e) => setNewLocation(e.target.value)}
-    className="w-full bg-stone-50 border border-stone-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 focus:outline-none focus:border-[#0e1626] focus:bg-white transition"
-  />
-                </div>
-
-                <div className="flex items-center space-x-2 pt-1 md:col-span-2">
-                  <input
-    type="checkbox"
-    id="mobile-em-chk"
-    checked={isEmergencyCheck}
-    onChange={(e) => setIsEmergencyCheck(e.target.checked)}
-    className="w-4 h-4 bg-stone-100 border-stone-300 text-[#c26111] rounded focus:ring-[#c26111] cursor-pointer"
-  />
-                  <label htmlFor="mobile-em-chk" className="text-[10px] font-extrabold text-slate-700 select-none cursor-pointer uppercase tracking-wider">
-                    Emergency 24/7 Service
-                  </label>
-                </div>
-
-                <button
-    type="submit"
-    className="w-full md:max-w-sm bg-[#c26111] hover:bg-[#a8520c] text-white font-bold py-3 px-4 rounded-xl transition mt-3 shadow-md uppercase tracking-wider text-[11px] md:col-span-2 cursor-pointer"
-  >
-                  {t.submitBtn || "Submit to Local Directory"}
-                </button>
-
-              </form>
-            </div>}
+          {currentTab === "suggest" && (
+            <Suspense fallback={<DirectorySkeleton />}>
+              <ServiceContributionHub
+                services={services}
+                onAddService={handleAddCustomService}
+                onDeleteCustomService={handleDeleteCustomService}
+                activeState={selectedState}
+                keralaDistricts={KERALA_DISTRICTS_LIST || KERALA_DISTRICTS}
+                localitiesEn={LOCALITIES_EN}
+                tamilNaduDistricts={TAMILNADU_DISTRICTS_LIST}
+                tamilNaduPanchayats={TAMILNADU_PANCHAYATS_BY_DISTRICT}
+                karnatakaDistricts={KARNATAKA_DISTRICTS_LIST}
+                karnatakaPanchayats={KARNATAKA_PANCHAYATS_BY_DISTRICT}
+                currentUser={currentUser}
+                navigateToTab={navigateToTab}
+                onSelectDetailService={setSelectedDetailService}
+              />
+            </Suspense>
+          )}
 
           {/* Tab Content: Grievance Tracker */}
           {currentTab === "grievances" && (
@@ -2496,6 +2447,7 @@ Phone: ${service.phoneNumber}`;
               setCurrentUser={setCurrentUser}
               onLogout={handleLogout}
               onOpenAuthModal={() => setShowStartLoginModal(true)}
+              onOpenAdminLogin={() => setShowAdminLoginModal(true)}
               selectedDistrict={selectedDistrict}
               setSelectedDistrict={setSelectedDistrict}
               selectedLocality={selectedLocality}
@@ -2518,9 +2470,43 @@ Phone: ${service.phoneNumber}`;
               ui={ui}
               t={t}
               language={language}
-              keralaDistricts={KERALA_DISTRICTS}
+              keralaDistricts={KERALA_DISTRICTS_LIST || KERALA_DISTRICTS}
+              keralaPanchayats={KERALA_PANCHAYATS_BY_DISTRICT}
               localitiesEn={LOCALITIES_EN}
+              tamilNaduDistricts={TAMILNADU_DISTRICTS_LIST}
+              tamilNaduPanchayats={TAMILNADU_PANCHAYATS_BY_DISTRICT}
+              karnatakaDistricts={KARNATAKA_DISTRICTS_LIST}
+              karnatakaPanchayats={KARNATAKA_PANCHAYATS_BY_DISTRICT}
+              andhraPradeshDistricts={ANDHRAPRADESH_DISTRICTS_LIST}
+              andhraPradeshPanchayats={ANDHRAPRADESH_PANCHAYATS_BY_DISTRICT}
             />
+          )}
+
+          {/* Tab Content 5: Restricted Panchayat Officer Admin Console */}
+          {currentTab === "admin" && adminUser && (
+            <div className="flex-1 min-h-0 h-full overflow-hidden bg-[#faf8f5] flex flex-col">
+              <Suspense fallback={<DirectorySkeleton />}>
+                <AdminConsole
+                  adminUser={adminUser}
+                  onExitAdmin={() => {
+                    setAdminUser(null);
+                    try { localStorage.removeItem("gramseva_admin_session"); } catch {}
+                    setCurrentTab("services");
+                    setSuccessToast("Admin session locked.");
+                  }}
+                  onSwitchToCitizenView={() => {
+                    setCurrentTab("services");
+                    setSuccessToast("Switched to Citizen View. Admin session is active.");
+                  }}
+                  selectedLocality={selectedLocality === "all" ? "Azhiyur" : selectedLocality}
+                  selectedDistrict={selectedDistrict === "all" ? "Kozhikode" : selectedDistrict}
+                  selectedState={selectedState}
+                  onApproveServiceToLiveDirectory={(newServ) => {
+                    setServices((prev) => [newServ, ...prev]);
+                  }}
+                />
+              </Suspense>
+            </div>
           )}
 
             </motion.div>
@@ -2816,12 +2802,32 @@ Phone: ${service.phoneNumber}`;
           )}
         </AnimatePresence>
 
-        {
-    /* Global Floating Toast for successful directory additions */
-  }
-        {successToast && <div role="status" aria-live="polite" className="absolute top-20 inset-x-6 z-50 bg-emerald-700 text-white px-4 py-2.5 rounded-xl shadow-lg text-center text-[10px] font-extrabold uppercase tracking-widest animate-bounce">
-            {successToast}
-          </div>}
+        {/* Global Floating Toast for notifications and system alerts */}
+        <AnimatePresence>
+          {successToast && (
+            <motion.div
+              initial={{ opacity: 0, y: -14, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -14, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              role="status"
+              aria-live="polite"
+              className="absolute top-16 sm:top-20 inset-x-4 sm:inset-x-auto sm:right-6 sm:max-w-md z-50 bg-emerald-800 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold tracking-wide border border-emerald-600/50 flex items-center justify-between gap-3 backdrop-blur-md"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
+                <span className="truncate">{successToast}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSuccessToast(null)}
+                className="p-1 hover:bg-emerald-700 rounded text-emerald-200 hover:text-white cursor-pointer transition shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Floating Action Button for Service Dashboard View Toggle (List vs Leaflet Map) */}
         {(currentTab === "services" || currentTab === "map") && (
@@ -2855,25 +2861,26 @@ Phone: ${service.phoneNumber}`;
   }
         <div className="bottom-dock app-dock absolute bottom-0 inset-x-0 border-t border-stone-200 flex items-center justify-around z-40 px-1 sm:px-2 select-none pb-safe bg-white/95 backdrop-blur-md" role="tablist" aria-label="Main app tabs">
           {[
-    { id: "services", label: ui.services || "Services", icon: <Building2 className="w-5 h-5" /> },
-    { id: "resolver", label: "Certificates", icon: <FileCheck2 className="w-5 h-5" /> },
-    { id: "wallet", label: "Wallet", icon: <FolderCheck className="w-5 h-5" /> },
-    { id: "grievances", label: "Grievance", icon: <ShieldAlert className="w-5 h-5" /> },
-    { id: "map", label: ui.map || "Map", icon: <Compass className="w-5 h-5" /> },
-    { id: "suggest", label: ui.suggest || "Suggest", icon: <Plus className="w-5 h-5" /> },
-    { id: "profile", label: ui.profile || "Profile", icon: <User className="w-5 h-5" /> }
-  ].map((tab) => {
-    const isActive = currentTab === tab.id;
-    return <button
-      key={tab.id}
-      type="button"
-      onClick={() => navigateToTab(tab.id)}
-      role="tab"
-      aria-selected={isActive}
-      aria-current={isActive ? "page" : undefined}
-      aria-label={`Open ${tab.label}`}
-      className={`dock-button ${isActive ? "is-active" : ""} relative flex flex-col items-center justify-center gap-1 flex-1 py-1.5 transition cursor-pointer select-none active:scale-95 ${isActive ? "text-[#c26111] font-bold" : "text-slate-500 hover:text-slate-800"}`}
-    >
+            { id: "services", label: ui.services || "Services", icon: <Building2 className="w-5 h-5" /> },
+            { id: "resolver", label: "Certificates", icon: <FileCheck2 className="w-5 h-5" /> },
+            { id: "wallet", label: "Wallet", icon: <FolderCheck className="w-5 h-5" /> },
+            { id: "grievances", label: "Grievance", icon: <ShieldAlert className="w-5 h-5" /> },
+            { id: "map", label: ui.map || "Map", icon: <Compass className="w-5 h-5" /> },
+            { id: "suggest", label: ui.suggest || "Suggest", icon: <Plus className="w-5 h-5" /> },
+            { id: "profile", label: ui.profile || "Profile", icon: <User className="w-5 h-5" /> },
+            ...(adminUser ? [{ id: "admin", label: "Admin", icon: <ShieldCheck className="w-5 h-5 text-amber-600" /> }] : [])
+          ].map((tab) => {
+            const isActive = currentTab === tab.id;
+            return <button
+              key={tab.id}
+              type="button"
+              onClick={() => navigateToTab(tab.id)}
+              role="tab"
+              aria-selected={isActive}
+              aria-current={isActive ? "page" : undefined}
+              aria-label={`Open ${tab.label}`}
+              className={`dock-button ${isActive ? "is-active" : ""} relative flex flex-col items-center justify-center gap-1 flex-1 py-1.5 transition cursor-pointer select-none active:scale-95 ${isActive ? "text-[#c26111] font-bold" : "text-slate-500 hover:text-slate-800"}`}
+            >
                 {isActive && (
                   <motion.div
                     layoutId="activeDockTab"
@@ -2884,8 +2891,24 @@ Phone: ${service.phoneNumber}`;
                 {tab.icon}
                 <span className="font-label text-[8px] sm:text-[9px] font-extrabold tracking-wider uppercase leading-none">{tab.label}</span>
               </button>;
-  })}
+          })}
         </div>
+
+        {/* Global Admin Login Modal (Hidden Officer Gateway) */}
+        <AdminLoginModal
+          isOpen={showAdminLoginModal}
+          onClose={() => setShowAdminLoginModal(false)}
+          onAdminAuthenticated={(adminData) => {
+            setAdminUser(adminData);
+            try { localStorage.setItem("gramseva_admin_session", JSON.stringify(adminData)); } catch {}
+            setIsGuestAllowed(true);
+            setCurrentTab("admin");
+            setSuccessToast(`Authorized as ${adminData.name}`);
+          }}
+          currentLocality={selectedLocality === "all" ? "Azhiyur" : selectedLocality}
+          currentDistrict={selectedDistrict === "all" ? "Kozhikode" : selectedDistrict}
+          currentState={selectedState}
+        />
 
       </div>
 
